@@ -17,6 +17,8 @@ class ViewController: UIViewController {
     var item: AVPlayerItem?
     
     let loader = CachedItemResourceLoader()
+    
+    let slider = UISlider(frame: CGRect.zero)
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -41,15 +43,28 @@ class ViewController: UIViewController {
         view.layer.addSublayer(layer)
         player?.play()
         
+        slider.frame = CGRect(x: 10, y: view.frame.height-100, width: view.frame.width-20, height: 50)
+        view.addSubview(slider)
+        slider.addTarget(self, action: #selector(self.sliderValueChange), for: UIControl.Event.touchUpInside)
+        
 //        let button = UIButton(frame: CGRect(x: 100, y: 100, width: 50, height: 50))
 //        button.backgroundColor = UIColor.yellow
 //        button.addTarget(self, action: #selector(self.stop), for: .touchUpInside)
 //        view.addSubview(button)
-//
-//        let button2 = UIButton(frame: CGRect(x: 200, y: 100, width: 50, height: 50))
-//        button2.backgroundColor = UIColor.red
-//        button2.addTarget(self, action: #selector(self.start), for: .touchUpInside)
-//        view.addSubview(button2)
+
+        let button2 = UIButton(frame: CGRect(x: 200, y: 100, width: 50, height: 50))
+        button2.backgroundColor = UIColor.red
+        button2.addTarget(self, action: #selector(self.start), for: .touchUpInside)
+        view.addSubview(button2)
+    }
+    
+    @objc func sliderValueChange() {
+        guard let duration = item?.duration else {
+            return
+        }
+        print(slider.value)
+        player?.seek(to: CMTime(seconds: duration.seconds*Double(slider.value), preferredTimescale: duration.timescale))
+        
     }
     
     @objc func stop() {
@@ -57,7 +72,25 @@ class ViewController: UIViewController {
     }
     
     @objc func start() {
-        let range: Range<Int> = Range<Int>(uncheckedBounds: (0, 2000*1024))
-        cacheFileHandler.fetchData(at: range)
+        player?.play()
+//        let range: Range<Int> = Range<Int>(uncheckedBounds: (0, 2000*1024))
+//        cacheFileHandler.fetchData(at: range)
     }
+}
+
+
+extension ViewController: FileDataDelegate {
+    func fileHandlerGetResponse(fileInfo info: CacheFileInfo) {
+        print("test file info get")
+    }
+    
+    func fileHandler(didFetch data: Data, at range: Range<Int>) {
+        print("test data get")
+    }
+    
+    func fileHandlerDidFinishFetchData() {
+        print("test fetched end")
+    }
+    
+    
 }

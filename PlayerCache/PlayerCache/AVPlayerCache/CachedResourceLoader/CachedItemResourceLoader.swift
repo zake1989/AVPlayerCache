@@ -12,10 +12,14 @@ import AVFoundation
 class CachedItemResourceLoader: NSObject {
     
     var loadingRequestList: [AVAssetResourceLoadingRequest] = []
+
+    var seekingRequestList: [AVAssetResourceLoadingRequest] = []
     
     var currentLoadingRequest: AVAssetResourceLoadingRequest?
     
     var cacheFileHandler: CacheFileHandler?
+    
+    var onSeeking: Bool = false
     
     override init() {
         super.init()
@@ -30,31 +34,18 @@ class CachedItemResourceLoader: NSObject {
         return urlString.replacingOccurrences(of: BasicFileData.localURLPrefix, with: "http")
     }
     
-    fileprivate func createFileHandler(_ urlString: String) {
-        guard cacheFileHandler == nil else {
-            return
-        }
-        cacheFileHandler = CacheFileHandler(videoUrl: urlString)
-        cacheFileHandler?.delegate = self
-    }
-    
-    fileprivate func requsetData(_ dataRequest: AVAssetResourceLoadingDataRequest) {
-        let range = Range<Int>.init(uncheckedBounds: (Int(dataRequest.requestedOffset), upper: Int(dataRequest.requestedOffset)+dataRequest.requestedLength))
-        Cache_Print("loader Data requested at range : \(range)", level: LogLevel.resource)
-        
-        cacheFileHandler?.fetchData(at: range)
-    }
-    
     fileprivate func processPendingRequests() {
         if let request = currentLoadingRequest, request.isFinished {
             Cache_Print("loader process pending request on begin", level: LogLevel.resource)
-            removeRequest(loadingRequest: request)
+            removeRequest()
         } else {
             Cache_Print("loader not process pending request on begin", level: LogLevel.resource)
             return
         }
         currentLoadingRequest = nil
-        if let request = loadingRequestList.last {
+        if let request = seekingRequestList.first {
+            processCurrentRequest(loadingRequest: request)
+        } else if let request = loadingRequestList.first {
             processCurrentRequest(loadingRequest: request)
         }
     }
@@ -73,6 +64,21 @@ class CachedItemResourceLoader: NSObject {
         let urlString = onlineUrl(localUrlString)
         createFileHandler(urlString)
         requsetData(request)
+    }
+    
+    fileprivate func createFileHandler(_ urlString: String) {
+        guard cacheFileHandler == nil else {
+            return
+        }
+        cacheFileHandler = CacheFileHandler(videoUrl: urlString)
+        cacheFileHandler?.delegate = self
+    }
+    
+    fileprivate func requsetData(_ dataRequest: AVAssetResourceLoadingDataRequest) {
+        let range = Range<Int>.init(uncheckedBounds: (Int(dataRequest.requestedOffset), upper: Int(dataRequest.requestedOffset)+dataRequest.requestedLength))
+        Cache_Print("loader Data requested at range : \(range)", level: LogLevel.resource)
+        
+        cacheFileHandler?.fetchData(at: range)
     }
     
 }
@@ -107,7 +113,7 @@ extension CachedItemResourceLoader: AVAssetResourceLoaderDelegate {
     
     func resourceLoader(_ resourceLoader: AVAssetResourceLoader,
                         shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
-        
+        print("loader cancel request wait")
         let isContentInfo = loadingRequest.contentInformationRequest == nil ? "is not content info" : "is content info"
         let isData = loadingRequest.dataRequest == nil ? "is not data" : "is data"
         Cache_Print("loader loading request : \(loadingRequest.request.url?.absoluteString ?? "")  \n \(isContentInfo) \n \(isData)", level: LogLevel.resource)
@@ -115,25 +121,29 @@ extension CachedItemResourceLoader: AVAssetResourceLoaderDelegate {
             Cache_Print("loader loading request direcly", level: LogLevel.resource)
             processCurrentRequest(loadingRequest: loadingRequest)
         }
-        loadingRequestList.append(loadingRequest)
-//        processPendingRequests()
+        if onSeeking {
+            seekingRequestList.append(loadingRequest)
+        } else {
+            loadingRequestList.append(loadingRequest)
+        }
         Cache_Print("loader pending request : \(loadingRequestList.count)", level: LogLevel.resource)
         return true
     }
     
     func resourceLoader(_ resourceLoader: AVAssetResourceLoader, didCancel loadingRequest: AVAssetResourceLoadingRequest) {
-        print("loader need cancel")
-        currentLoadingRequest?.finishLoading()
+        print("loader cancel need")
         cacheFileHandler?.forceStopCurrentProcess()
+        onSeeking = true
     }
     
-    func removeRequest(loadingRequest: AVAssetResourceLoadingRequest) {
-        guard let index = loadingRequestList.enumerated().filter({ (content) -> Bool in
-            return content.element == loadingRequest
-        }).first?.offset else {
-                return
+    func removeRequest() {
+        loadingRequestList = loadingRequestList.filter { (request) -> Bool in
+            return !(request.isFinished || request.isCancelled)
         }
-        loadingRequestList.remove(at: index)
+        seekingRequestList = seekingRequestList.filter { (request) -> Bool in
+            return !(request.isFinished || request.isCancelled)
+        }
+        
     }
 }
 

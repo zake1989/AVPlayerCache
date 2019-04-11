@@ -107,15 +107,17 @@ class CacheFileHandler {
         processChunk()
     }
     
+    func stopAndFetch(at range: Range<Int>) {
+        forceStopCurrentProcess()
+        fetchData(at: range)
+    }
+    
     func forceStopCurrentProcess() {
-        fileOperationQueue.addOperation { [weak self] in
-            guard let strongSelf = self else { return }
-            strongSelf.currentChunkList = []
-            strongSelf.downloader.stopDownload()
-            strongSelf.saveCachedData()
-            FileDownlaodingManager.shared.endDownloading(strongSelf.itemURL.baseURLString)
-            strongSelf.delegate?.fileHandlerDidFinishFetchData()
-        }
+        currentChunkList = []
+        downloader.stopDownload()
+        saveCachedData()
+        FileDownlaodingManager.shared.endDownloading(itemURL.baseURLString)
+        delegate?.fileHandlerDidFinishFetchData()
     }
     
     fileprivate func processChunk() {
@@ -220,7 +222,12 @@ extension CacheFileHandler: SessionOutputDelegate {
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        processChunk()
+        if error != nil {
+            // error handle
+        } else {
+            processChunk()
+        }
+        
     }
     
 }

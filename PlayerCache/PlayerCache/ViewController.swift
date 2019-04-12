@@ -15,10 +15,13 @@ import AVFoundation
 //- 3 : "https://cdn.palm-chat.com/V/0be3e1cb1e02415e9443e8be34461845_z.mp4"
 //- 4 : "https://cdn.palm-chat.com/V/45e0c55e55774685af55430047e0ed47_z.mp4"
 //"https://mvvideo5.meitudata.com/56ea0e90d6cb2653.mp4"
+//"http://v1-dy.ixigua.com/fb0fb3d40770ce9a690d95a4fde01951/5cb056dc/video/m/220341e36790cb34dbd82a64eed958fa9521161b88510000287a504d0444/?rc=ajptNXA1ZzZ2bDMzaWkzM0ApQHRAb0Y1OjQzNDozNDk2OTU3PDNAKXUpQGczdylAZmxkamV6aGhkZjs0QC02ZGRhNW9mYF8tLS8tL3NzLW8jbyNDLy02My0uLS0wLi4uLS4vaTpiLW8jOmAtbyNtbCtiK2p0OiMvLl4%3D"
+
 
 class ViewController: UIViewController {
     
-    let urlString: String = "https://mvvideo5.meitudata.com/56ea0e90d6cb2653.mp4"
+    let urlString: String = "http://v6-dy.ixigua.com/3f22d471eca52242da6aabc1ec0cfb02/5cb06dc7/video/m/220d12c52c4ae0c4a498be52a948fe078cd1161cf4ed00003699b11c273c/?rc=M21qNHRlbWx5bDMzN2kzM0ApQHRAbzdFPDQzNjszNDQ0OjU3PDNAKXUpQGczdylAZmxkamV6aGhkZjs0QGplM2xsL25wal8tLTAtL3NzLW8jbyMxNTM2MC0uLS0xMi4uLS4vaTpiLW8jOmAtbyNtbCtiK2p0OiMvLl4%3D"
+
     
     lazy var cacheFileHandler: CacheFileHandler = CacheFileHandler(videoUrl: urlString)
     
@@ -38,7 +41,7 @@ class ViewController: UIViewController {
     lazy var cachePlayerItem: CachePlayerItem = CachePlayerItem()
     
     lazy var item: AVPlayerItem? = cachePlayerItem.createPlayerItem(urlString)
-//         cachePlayerItem.createPureOnlineItem(urlString)
+//         cachePlayerItem.createPureOnlineItem(urlString)  cachePlayerItem.createPlayerItem(urlString)
     
     let loader = CachedItemResourceLoader()
     
@@ -69,7 +72,8 @@ class ViewController: UIViewController {
         }
         print(slider.value)
         if let player = itemPlayer {
-            player.seek(Double(slider.value))
+            player.fastSeek(Double(slider.value))
+//            player.seek(Double(slider.value))
         } else {
             player?.seek(to: CMTime(seconds: duration.seconds*Double(slider.value), preferredTimescale: duration.timescale))
         }
@@ -100,7 +104,7 @@ extension ViewController: ItemPlayerDelegate {
 }
 
 extension ViewController: FileDataDelegate {
-    func fileHandlerGetResponse(fileInfo info: CacheFileInfo) {
+    func fileHandlerGetResponse(fileInfo info: CacheFileInfo, response: URLResponse?) {
         print("test file info get")
     }
     

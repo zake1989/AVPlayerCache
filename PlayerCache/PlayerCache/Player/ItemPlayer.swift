@@ -27,7 +27,7 @@ protocol ItemPlayerDelegate: class {
 
 class ItemPlayer {
     
-    static let needLog: Bool = false
+    static let needLog: Bool = true
     
     var itemDuration: CMTime {
         guard let playerItem = playerItem else {
@@ -353,6 +353,11 @@ extension ItemPlayer {
                                                         strongSelf.actionWhenReadyToPlay()
                                                     }
                                                 } else {
+                                                    if #available(iOS 10.0, *) {
+                                                        print("not keep up reason: \(strongSelf.player.reasonForWaitingToPlay)")
+                                                    } else {
+                                                        // Fallback on earlier versions
+                                                    }
                                                     strongSelf.actionWhenPerparing()
                                                 }
         })

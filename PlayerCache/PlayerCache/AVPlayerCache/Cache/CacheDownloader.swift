@@ -157,7 +157,7 @@ class CacheDownloader: NSObject {
                                  cachePolicy: .reloadIgnoringLocalAndRemoteCacheData,
                                  timeoutInterval: 20)
         if !range.isEmpty {
-            let rangeString = "bytes=\(range.lowerBound)-\(range.upperBound-1)"
+            let rangeString = "bytes=\(range.lowerBound)-\(range.upperBound)"
             request.setValue(rangeString, forHTTPHeaderField: "Range")
         }
         task = session?.dataTask(with: request)

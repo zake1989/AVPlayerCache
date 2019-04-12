@@ -9,7 +9,7 @@
 import UIKit
 
 protocol FileDataDelegate: class {
-    func fileHandlerGetResponse(fileInfo info: CacheFileInfo)
+    func fileHandlerGetResponse(fileInfo info: CacheFileInfo, response: URLResponse?)
     func fileHandler(didFetch data: Data, at range: Range<Int>)
     func fileHandlerDidFinishFetchData(error: Error?)
 }
@@ -109,16 +109,30 @@ class CacheFileHandler {
         Cache_Print("loader data start fetched", level: LogLevel.resource)
         FileDownlaodingManager.shared.startDownloading(itemURL.baseURLString)
         onPredownload = false
+        
+        defer {
+            if !savedCacheData.fileInfo.isEmptyInfo() {
+                delegate?.fileHandlerGetResponse(fileInfo: savedCacheData.fileInfo, response: nil)
+            }
+            processChunk()
+        }
+
+        if !savedCacheData.fileInfo.isEmptyInfo() && !savedCacheData.fileInfo.byteRangeAccessSupported {
+            let chunk = CacheMetaData(type: .remote, range: Range<Int>(uncheckedBounds: (0, 0)))
+            currentChunkList = [chunk]
+            return
+        }
+        
         var endRange = range
         let fileLength = Int(savedCacheData.fileInfo.contentLength)
-        if fileLength != 0 && range.upperBound > fileLength {
+//        if range.upperBound - range.lowerBound > 2 && range.lowerBound == 0{
+//            endRange = Range<Int>.init(uncheckedBounds: (0, max(range.lowerBound, fileLength)))
+//        } else
+            if fileLength != 0 && range.upperBound > fileLength {
             endRange = Range<Int>.init(uncheckedBounds: (range.lowerBound, fileLength))
         }
         currentChunkList = savedCacheData.readChunkList(savedCacheData.chunkList, range: endRange)
-        if !savedCacheData.fileInfo.isEmptyInfo() {
-            delegate?.fileHandlerGetResponse(fileInfo: savedCacheData.fileInfo)
-        }
-        processChunk()
+        
     }
     
     func forceStopCurrentProcess() {
@@ -220,7 +234,7 @@ extension CacheFileHandler: SessionOutputDelegate {
         setStartTime()
         readCacheFileInfo(from: response)
         if needResponse {
-            delegate?.fileHandlerGetResponse(fileInfo: savedCacheData.fileInfo)
+            delegate?.fileHandlerGetResponse(fileInfo: savedCacheData.fileInfo, response: response)
         }
     }
     

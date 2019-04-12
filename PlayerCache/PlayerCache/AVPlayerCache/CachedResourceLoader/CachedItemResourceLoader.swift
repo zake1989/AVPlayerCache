@@ -41,6 +41,8 @@ class CachedItemResourceLoader: NSObject {
             processCurrentRequest(loadingRequest: request)
         } else if let request = loadingRequestList.first {
             processCurrentRequest(loadingRequest: request)
+        } else {
+            Cache_Print("loader process no more pending request", level: LogLevel.resource)
         }
     }
     
@@ -78,7 +80,7 @@ class CachedItemResourceLoader: NSObject {
 }
 
 extension CachedItemResourceLoader: FileDataDelegate {
-    func fileHandlerGetResponse(fileInfo info: CacheFileInfo) {
+    func fileHandlerGetResponse(fileInfo info: CacheFileInfo, response: URLResponse?) {
         DispatchQueue.main.async {
             Cache_Print("loader loading request response : \(info)", level: LogLevel.resource)
             self.currentLoadingRequest?.contentInformationRequest?.contentType = info.contentType
@@ -96,10 +98,11 @@ extension CachedItemResourceLoader: FileDataDelegate {
     
     func fileHandlerDidFinishFetchData(error: Error?) {
         DispatchQueue.main.async {
-            Cache_Print("loader finish fetch data", level: LogLevel.resource)
-            if let e = error {
+            if let e = error, (e as NSError).code != NSURLErrorCancelled {
+                Cache_Print("loader finish fetch data with error", level: LogLevel.resource)
                 self.currentLoadingRequest?.finishLoading(with: e)
             } else {
+                Cache_Print("loader finish fetch data", level: LogLevel.resource)
                 self.currentLoadingRequest?.finishLoading()
             }
             self.processPendingRequests()
@@ -109,11 +112,16 @@ extension CachedItemResourceLoader: FileDataDelegate {
 
 extension CachedItemResourceLoader: AVAssetResourceLoaderDelegate {
     
+    func resourceLoader(_ resourceLoader: AVAssetResourceLoader, shouldWaitForRenewalOfRequestedResource renewalRequest: AVAssetResourceRenewalRequest) -> Bool {
+        Cache_Print("loader renew request", level: LogLevel.resource)
+        return false
+    }
+    
     func resourceLoader(_ resourceLoader: AVAssetResourceLoader,
                         shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
         let isContentInfo = loadingRequest.contentInformationRequest == nil ? "is not content info" : "is content info"
         let isData = loadingRequest.dataRequest == nil ? "is not data" : "is data"
-        Cache_Print("loader loading request : \(loadingRequest.request.url?.absoluteString ?? "")  \n \(isContentInfo) \n \(isData)", level: LogLevel.resource)
+        Cache_Print("loader loading request : \n \(isContentInfo) \n \(isData)", level: LogLevel.resource)
         if currentLoadingRequest == nil {
             Cache_Print("loader loading request direcly", level: LogLevel.resource)
             processCurrentRequest(loadingRequest: loadingRequest)
@@ -123,7 +131,7 @@ extension CachedItemResourceLoader: AVAssetResourceLoaderDelegate {
         } else {
             loadingRequestList.append(loadingRequest)
         }
-        Cache_Print("loader pending request : \(loadingRequestList.count)", level: LogLevel.resource)
+        Cache_Print("loader pending request : \(loadingRequestList.count+seekingRequestList.count)", level: LogLevel.resource)
         return true
     }
     

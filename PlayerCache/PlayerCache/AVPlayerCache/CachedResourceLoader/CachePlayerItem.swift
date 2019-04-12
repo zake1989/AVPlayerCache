@@ -11,7 +11,13 @@ import AVFoundation
 
 class CachePlayerItem {
     
-    static func createPlayerItem(_ urlString: String) -> AVPlayerItem? {
+    let loader = CachedItemResourceLoader()
+    
+    init() {
+        
+    }
+    
+    func createPlayerItem(_ urlString: String) -> AVPlayerItem? {
         if CacheFileHandler.isFullyDownload(videoUrl: urlString) {
             return createLocalItem(urlString)
         } else {
@@ -19,19 +25,28 @@ class CachePlayerItem {
         }
     }
     
-    private static func createLocalItem(_ urlString: String) -> AVPlayerItem {
+    func createPureOnlineItem(_ urlString: String) -> AVPlayerItem? {
+        guard let url = URL(string: urlString) else {
+            return nil
+        }
+        let asset = AVURLAsset(url: url)
+        let item = AVPlayerItem(asset: asset)
+        item.canUseNetworkResourcesForLiveStreamingWhilePaused = true
+        return item
+    }
+    
+    private func createLocalItem(_ urlString: String) -> AVPlayerItem {
         let filePath = CacheFilePathHelper.videoPath(from: urlString)
         let asset = AVURLAsset(url: URL(fileURLWithPath: filePath))
         return AVPlayerItem(asset: asset)
     }
     
-    private static func createOnlineItem(_ urlString: String) -> AVPlayerItem? {
+    private func createOnlineItem(_ urlString: String) -> AVPlayerItem? {
         let localURL = ItemURL.createLocalURL(urlString)
         guard let url = URL(string: localURL) else {
             return nil
         }
         let asset = AVURLAsset(url: url)
-        let loader = CachedItemResourceLoader()
         asset.resourceLoader.setDelegate(loader, queue: DispatchQueue.main)
         let item = AVPlayerItem(asset: asset)
         item.canUseNetworkResourcesForLiveStreamingWhilePaused = true

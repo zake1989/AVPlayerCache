@@ -10,6 +10,9 @@ import UIKit
 import AVFoundation
 
 class CachedItemResourceLoader: NSObject {
+    deinit {
+        Cache_Print("deinit cached item resource loader", level: LogLevel.resource)
+    }
     
     var loadingRequestList: [AVAssetResourceLoadingRequest] = []
 
@@ -23,7 +26,6 @@ class CachedItemResourceLoader: NSObject {
     
     override init() {
         super.init()
-        
     }
     
     fileprivate func processPendingRequests() {
@@ -92,10 +94,14 @@ extension CachedItemResourceLoader: FileDataDelegate {
         }
     }
     
-    func fileHandlerDidFinishFetchData() {
+    func fileHandlerDidFinishFetchData(error: Error?) {
         DispatchQueue.main.async {
             Cache_Print("loader finish fetch data", level: LogLevel.resource)
-            self.currentLoadingRequest?.finishLoading()
+            if let e = error {
+                self.currentLoadingRequest?.finishLoading(with: e)
+            } else {
+                self.currentLoadingRequest?.finishLoading()
+            }
             self.processPendingRequests()
         }
     }

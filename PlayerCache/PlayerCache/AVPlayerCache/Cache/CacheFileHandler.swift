@@ -11,7 +11,7 @@ import UIKit
 protocol FileDataDelegate: class {
     func fileHandlerGetResponse(fileInfo info: CacheFileInfo)
     func fileHandler(didFetch data: Data, at range: Range<Int>)
-    func fileHandlerDidFinishFetchData()
+    func fileHandlerDidFinishFetchData(error: Error?)
 }
 
 class CacheFileHandler {
@@ -126,7 +126,8 @@ class CacheFileHandler {
         downloader.stopDownload()
         saveCachedData()
         FileDownlaodingManager.shared.endDownloading(itemURL.baseURLString)
-        delegate?.fileHandlerDidFinishFetchData()
+        let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled, userInfo: nil) as Error
+        delegate?.fileHandlerDidFinishFetchData(error: error)
     }
     
     func stopAndFetch(at range: Range<Int>) {
@@ -134,7 +135,7 @@ class CacheFileHandler {
         fetchData(at: range)
     }
     
-    fileprivate func processChunk() {
+    fileprivate func processChunk(_ error: Error? = nil) {
         guard let chunk = currentChunkList.first else {
             fileOperationQueue.addOperation { [weak self] in
                 guard let strongSelf = self else { return }
@@ -142,7 +143,7 @@ class CacheFileHandler {
                 strongSelf.saveCachedData()
                 FileDownlaodingManager.shared.endDownloading(strongSelf.itemURL.baseURLString)
                 Cache_Print("delegate can call \(String(describing: strongSelf.delegate))", level: LogLevel.file)
-                strongSelf.delegate?.fileHandlerDidFinishFetchData()
+                strongSelf.delegate?.fileHandlerDidFinishFetchData(error: error)
             }
             return
         }
@@ -236,11 +237,11 @@ extension CacheFileHandler: SessionOutputDelegate {
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if error != nil {
-            // error handle
-        } else {
-            processChunk()
+        if let e = error as NSError?, e.code == NSURLErrorCancelled {
+            print(e)
+            return
         }
+        processChunk(error)
     }
 }
 

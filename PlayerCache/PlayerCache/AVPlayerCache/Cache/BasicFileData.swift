@@ -23,7 +23,7 @@ class BasicFileData {
     
     static let localURLPrefix: String = "CacheUrlPrefix"
     
-    static let logLevel: LogLevel = .error
+    static let logLevel: LogLevel = .net
 
 }
 

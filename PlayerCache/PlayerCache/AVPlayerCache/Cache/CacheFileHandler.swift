@@ -71,6 +71,20 @@ class CacheFileHandler {
         _ = CacheFilePathHelper.createFileAtPath(videoPath)
     }
     
+    static func isFullyDownload(videoUrl: String) -> Bool {
+        let metaDataFilePath = CacheFilePathHelper.videoMetaDataFile(from: videoUrl)
+        guard CacheFilePathHelper.fileExistsAtPath(metaDataFilePath) else {
+            return false
+        }
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: metaDataFilePath)),
+            let savedData = try? JSONDecoder().decode(SavedCacheData.self, from: data),
+            let firstRange = savedData.chunkList.first {
+            let range = firstRange.range.upperBound - firstRange.range.lowerBound
+            return range == Int(savedData.fileInfo.contentLength)
+        }
+        return false
+    }
+    
     func perDownloadData() {
         let fileLength = Int(savedCacheData.fileInfo.contentLength)
         if fileLength != 0 {
@@ -107,17 +121,17 @@ class CacheFileHandler {
         processChunk()
     }
     
-    func stopAndFetch(at range: Range<Int>) {
-        forceStopCurrentProcess()
-        fetchData(at: range)
-    }
-    
     func forceStopCurrentProcess() {
         currentChunkList = []
         downloader.stopDownload()
         saveCachedData()
         FileDownlaodingManager.shared.endDownloading(itemURL.baseURLString)
         delegate?.fileHandlerDidFinishFetchData()
+    }
+    
+    func stopAndFetch(at range: Range<Int>) {
+        forceStopCurrentProcess()
+        fetchData(at: range)
     }
     
     fileprivate func processChunk() {
@@ -227,9 +241,7 @@ extension CacheFileHandler: SessionOutputDelegate {
         } else {
             processChunk()
         }
-        
     }
-    
 }
 
 // MARK: - meta data reader writer

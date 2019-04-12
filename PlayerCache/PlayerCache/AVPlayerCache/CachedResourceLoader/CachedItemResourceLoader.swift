@@ -26,14 +26,6 @@ class CachedItemResourceLoader: NSObject {
         
     }
     
-    static func createLocalURL(_ urlString: String) -> String {
-        return urlString.replacingOccurrences(of: "http", with: BasicFileData.localURLPrefix)
-    }
-    
-    func onlineUrl(_ urlString: String) -> String {
-        return urlString.replacingOccurrences(of: BasicFileData.localURLPrefix, with: "http")
-    }
-    
     fileprivate func processPendingRequests() {
         if let request = currentLoadingRequest, request.isFinished {
             Cache_Print("loader process pending request on begin", level: LogLevel.resource)
@@ -52,16 +44,17 @@ class CachedItemResourceLoader: NSObject {
     
     func processCurrentRequest(loadingRequest: AVAssetResourceLoadingRequest) {
         guard currentLoadingRequest == nil else {
-            Cache_Print("loader not process request", level: LogLevel.resource)
+            Cache_Print("loader not process request: request empty", level: LogLevel.resource)
             return
         }
         Cache_Print("loader start process request", level: LogLevel.resource)
         currentLoadingRequest = loadingRequest
         guard let localUrlString = loadingRequest.request.url?.absoluteString,
             let request = loadingRequest.dataRequest else {
+                Cache_Print("loader not process request: request error", level: LogLevel.resource)
                 return
         }
-        let urlString = onlineUrl(localUrlString)
+        let urlString = ItemURL.onlineUrl(localUrlString)
         createFileHandler(urlString)
         requsetData(request)
     }
@@ -77,7 +70,6 @@ class CachedItemResourceLoader: NSObject {
     fileprivate func requsetData(_ dataRequest: AVAssetResourceLoadingDataRequest) {
         let range = Range<Int>.init(uncheckedBounds: (Int(dataRequest.requestedOffset), upper: Int(dataRequest.requestedOffset)+dataRequest.requestedLength))
         Cache_Print("loader Data requested at range : \(range)", level: LogLevel.resource)
-        
         cacheFileHandler?.fetchData(at: range)
     }
     
@@ -113,7 +105,6 @@ extension CachedItemResourceLoader: AVAssetResourceLoaderDelegate {
     
     func resourceLoader(_ resourceLoader: AVAssetResourceLoader,
                         shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
-        print("loader cancel request wait")
         let isContentInfo = loadingRequest.contentInformationRequest == nil ? "is not content info" : "is content info"
         let isData = loadingRequest.dataRequest == nil ? "is not data" : "is data"
         Cache_Print("loader loading request : \(loadingRequest.request.url?.absoluteString ?? "")  \n \(isContentInfo) \n \(isData)", level: LogLevel.resource)
@@ -131,7 +122,7 @@ extension CachedItemResourceLoader: AVAssetResourceLoaderDelegate {
     }
     
     func resourceLoader(_ resourceLoader: AVAssetResourceLoader, didCancel loadingRequest: AVAssetResourceLoadingRequest) {
-        print("loader cancel need")
+        Cache_Print("loader cancel need", level: LogLevel.resource)
         cacheFileHandler?.forceStopCurrentProcess()
         onSeeking = true
     }
@@ -143,7 +134,6 @@ extension CachedItemResourceLoader: AVAssetResourceLoaderDelegate {
         seekingRequestList = seekingRequestList.filter { (request) -> Bool in
             return !(request.isFinished || request.isCancelled)
         }
-        
     }
 }
 

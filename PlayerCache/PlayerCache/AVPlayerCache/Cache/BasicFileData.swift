@@ -34,4 +34,12 @@ class ItemURL {
         return URL(string: baseURLString)
     }
     
+    static func createLocalURL(_ urlString: String) -> String {
+        return urlString.replacingOccurrences(of: "http", with: BasicFileData.localURLPrefix)
+    }
+    
+    static func onlineUrl(_ urlString: String) -> String {
+        return urlString.replacingOccurrences(of: BasicFileData.localURLPrefix, with: "http")
+    }
+    
 }

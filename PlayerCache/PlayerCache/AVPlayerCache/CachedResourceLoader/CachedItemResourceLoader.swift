@@ -92,7 +92,9 @@ extension CachedItemResourceLoader: FileDataDelegate {
     func fileHandler(didFetch data: Data, at range: Range<Int>) {
         DispatchQueue.main.async {
             Cache_Print("loader fetched Data: \(data.count)", level: LogLevel.resource)
-            self.currentLoadingRequest?.dataRequest?.respond(with: data)
+            if self.currentLoadingRequest?.contentInformationRequest == nil {
+                self.currentLoadingRequest?.dataRequest?.respond(with: data)
+            }
         }
     }
     
@@ -104,6 +106,12 @@ extension CachedItemResourceLoader: FileDataDelegate {
             } else {
                 Cache_Print("loader finish fetch data", level: LogLevel.resource)
                 self.currentLoadingRequest?.finishLoading()
+//                if self.currentLoadingRequest?.contentInformationRequest?.isByteRangeAccessSupported == true {
+//
+//                } else {
+////                    self.currentLoadingRequest?.finishLoading()
+//                    self.cacheFileHandler?.fetchData(at: Range<Int>.init(uncheckedBounds: (0,0)))
+//                }
             }
             self.processPendingRequests()
         }

@@ -20,7 +20,7 @@ import AVFoundation
 
 class ViewController: UIViewController {
     
-    let urlString: String = "http://v6-dy.ixigua.com/3f22d471eca52242da6aabc1ec0cfb02/5cb06dc7/video/m/220d12c52c4ae0c4a498be52a948fe078cd1161cf4ed00003699b11c273c/?rc=M21qNHRlbWx5bDMzN2kzM0ApQHRAbzdFPDQzNjszNDQ0OjU3PDNAKXUpQGczdylAZmxkamV6aGhkZjs0QGplM2xsL25wal8tLTAtL3NzLW8jbyMxNTM2MC0uLS0xMi4uLS4vaTpiLW8jOmAtbyNtbCtiK2p0OiMvLl4%3D"
+    let urlString: String = "https://cdn.palm-chat.com/V/d7bc1d2d-f7a9-4763-a0f6-4454cf4fb94b.mp4"
 
     
     lazy var cacheFileHandler: CacheFileHandler = CacheFileHandler(videoUrl: urlString)

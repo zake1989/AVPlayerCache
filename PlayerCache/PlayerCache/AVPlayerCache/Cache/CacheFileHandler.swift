@@ -116,19 +116,13 @@ class CacheFileHandler {
             }
             processChunk()
         }
-
-        if !savedCacheData.fileInfo.isEmptyInfo() && !savedCacheData.fileInfo.byteRangeAccessSupported {
-            let chunk = CacheMetaData(type: .remote, range: Range<Int>(uncheckedBounds: (0, 0)))
-            currentChunkList = [chunk]
-            return
-        }
         
         var endRange = range
         let fileLength = Int(savedCacheData.fileInfo.contentLength)
-//        if range.upperBound - range.lowerBound > 2 && range.lowerBound == 0{
-//            endRange = Range<Int>.init(uncheckedBounds: (0, max(range.lowerBound, fileLength)))
-//        } else
-            if fileLength != 0 && range.upperBound > fileLength {
+        //        if range.upperBound - range.lowerBound > 2 && range.lowerBound == 0 {
+        //            endRange = Range<Int>.init(uncheckedBounds: (0, max(range.lowerBound, fileLength)))
+        //        } else
+        if fileLength != 0 && range.upperBound > fileLength {
             endRange = Range<Int>.init(uncheckedBounds: (range.lowerBound, fileLength))
         }
         currentChunkList = savedCacheData.readChunkList(savedCacheData.chunkList, range: endRange)

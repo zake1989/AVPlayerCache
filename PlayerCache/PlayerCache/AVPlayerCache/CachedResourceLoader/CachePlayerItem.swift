@@ -11,6 +11,10 @@ import AVFoundation
 
 class CachePlayerItem {
     
+    deinit {
+        Cache_Print("deinit cache player item", level: LogLevel.dealloc)
+    }
+    
     let loader = CachedItemResourceLoader()
     
     init() {

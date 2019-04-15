@@ -82,10 +82,13 @@ class CachedItemResourceLoader: NSObject {
 extension CachedItemResourceLoader: FileDataDelegate {
     func fileHandlerGetResponse(fileInfo info: CacheFileInfo, response: URLResponse?) {
         DispatchQueue.main.async {
+            guard let infoRequest = self.currentLoadingRequest?.contentInformationRequest else {
+                return
+            }
             Cache_Print("loader loading request response : \(info)", level: LogLevel.resource)
-            self.currentLoadingRequest?.contentInformationRequest?.contentType = info.contentType
-            self.currentLoadingRequest?.contentInformationRequest?.contentLength = Int64(info.contentLength)
-            self.currentLoadingRequest?.contentInformationRequest?.isByteRangeAccessSupported = info.byteRangeAccessSupported
+            infoRequest.contentType = info.contentType
+            infoRequest.contentLength = Int64(info.contentLength)
+            infoRequest.isByteRangeAccessSupported = info.byteRangeAccessSupported
         }
     }
     
@@ -106,12 +109,6 @@ extension CachedItemResourceLoader: FileDataDelegate {
             } else {
                 Cache_Print("loader finish fetch data", level: LogLevel.resource)
                 self.currentLoadingRequest?.finishLoading()
-//                if self.currentLoadingRequest?.contentInformationRequest?.isByteRangeAccessSupported == true {
-//
-//                } else {
-////                    self.currentLoadingRequest?.finishLoading()
-//                    self.cacheFileHandler?.fetchData(at: Range<Int>.init(uncheckedBounds: (0,0)))
-//                }
             }
             self.processPendingRequests()
         }

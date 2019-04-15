@@ -15,14 +15,17 @@ import AVFoundation
 //- 3 : "https://cdn.palm-chat.com/V/0be3e1cb1e02415e9443e8be34461845_z.mp4"
 //- 4 : "https://cdn.palm-chat.com/V/45e0c55e55774685af55430047e0ed47_z.mp4"
 //"https://mvvideo5.meitudata.com/56ea0e90d6cb2653.mp4"
-//"http://v1-dy.ixigua.com/fb0fb3d40770ce9a690d95a4fde01951/5cb056dc/video/m/220341e36790cb34dbd82a64eed958fa9521161b88510000287a504d0444/?rc=ajptNXA1ZzZ2bDMzaWkzM0ApQHRAb0Y1OjQzNDozNDk2OTU3PDNAKXUpQGczdylAZmxkamV6aGhkZjs0QC02ZGRhNW9mYF8tLS8tL3NzLW8jbyNDLy02My0uLS0wLi4uLS4vaTpiLW8jOmAtbyNtbCtiK2p0OiMvLl4%3D"
+//"https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f340000bimvsiqj2boqo16ghjm0"
+//"https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0300fc20000bik28jcif32phdckjgog"
+//"https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200fc50000bierlad1mik4qf9714sg"
+//"https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f7e0000biirpudqg5b5btlhr6n0"
+//"https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f880000bii87pveqk816g9s7ql0"
 
 
 class ViewController: UIViewController {
     
-    let urlString: String = "https://cdn.palm-chat.com/V/d7bc1d2d-f7a9-4763-a0f6-4454cf4fb94b.mp4"
+    let urlString: String = "https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f880000bii87pveqk816g9s7ql0"
 
-    
     lazy var cacheFileHandler: CacheFileHandler = CacheFileHandler(videoUrl: urlString)
     
     lazy var itemPlayer: ItemPlayer? = {

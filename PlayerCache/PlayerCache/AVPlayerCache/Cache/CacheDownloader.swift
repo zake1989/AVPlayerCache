@@ -37,6 +37,10 @@ protocol SessionOutputDelegate: SessionBaseOutputDelegate {
 
 class SessionDataForworder: NSObject, URLSessionDataDelegate {
     
+    deinit {
+        Cache_Print("deinit session data forworder", level: LogLevel.dealloc)
+    }
+    
     weak var forwordDelegate: SessionForwordDelegate?
     
     fileprivate var bufferData: Data = Data()
@@ -122,6 +126,10 @@ class SessionDataForworder: NSObject, URLSessionDataDelegate {
 }
 
 class CacheDownloader: NSObject {
+    deinit {
+        Cache_Print("deinit cache downloader", level: LogLevel.dealloc)
+    }
+    
     weak var outputDelegate: SessionOutputDelegate?
     
     fileprivate var session: URLSession?

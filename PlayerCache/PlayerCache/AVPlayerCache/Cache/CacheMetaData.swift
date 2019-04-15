@@ -14,20 +14,21 @@ enum CacheType: Int {
 }
 
 struct SavedCacheData: Codable {
-    var chunkList: [CacheMetaData]
+    var chunkList: [CacheMetaData] {
+        didSet {
+            fileInfo.downloadedContentLength = Int64(updateDownloadedSize())
+        }
+    }
     var fileInfo: CacheFileInfo
     var downloadSpeed: Int      // KB/s
     
-    func handleTwoRange(_ lr: Range<Int>, rr: Range<Int>) -> Range<Int>? {
+    fileprivate func handleTwoRange(_ lr: Range<Int>, rr: Range<Int>) -> Range<Int>? {
         let minLower = min(lr.lowerBound, rr.lowerBound)
         let maxUpper = max(lr.upperBound, rr.upperBound)
-        
         if lr.overlaps(rr) {
             return Range<Int>(uncheckedBounds: (minLower , maxUpper))
         }
-        
         let clampedRange = lr.clamped(to: rr)
-        
         if clampedRange.lowerBound < clampedRange.upperBound {
             return Range<Int>(uncheckedBounds: (minLower , maxUpper))
         } else if clampedRange.lowerBound == clampedRange.upperBound {
@@ -35,8 +36,14 @@ struct SavedCacheData: Codable {
                 return Range<Int>(uncheckedBounds: (minLower , maxUpper))
             }
         }
-        
         return nil
+    }
+    
+    fileprivate func updateDownloadedSize() -> Int {
+        let chunkSize: [Int] = chunkList.map { (chunk) -> Int in
+            return chunk.range.upperBound-chunk.range.lowerBound
+        }
+        return chunkSize.reduce(0, +)
     }
     
     func inserRangeToList(_ chunkList: inout [CacheMetaData], rr: CacheMetaData) {
@@ -138,8 +145,8 @@ struct CacheMetaData: Equatable, Codable {
 struct CacheFileInfo: Codable {
     var contentType: String = ""
     var byteRangeAccessSupported: Bool = false
-    var contentLength: Double = 0
-    var downloadedContentLength: Double = 0
+    var contentLength: Int64 = 0
+    var downloadedContentLength: Int64 = 0
     
     func isEmptyInfo() -> Bool {
         return contentType == "" || contentLength == 0

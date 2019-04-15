@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import MobileCoreServices
 
 protocol FileDataDelegate: class {
     func fileHandlerGetResponse(fileInfo info: CacheFileInfo, response: URLResponse?)
@@ -17,6 +18,7 @@ protocol FileDataDelegate: class {
 class CacheFileHandler {
     
     deinit {
+        Cache_Print("deinit cache file handler", level: LogLevel.dealloc)
         saveCachedData()
         fileReader?.closeFile()
         fileWriter?.closeFile()
@@ -235,6 +237,9 @@ extension CacheFileHandler: SessionOutputDelegate {
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         Cache_Print("data fetched on remote: \(data.count)", level: LogLevel.file)
         countSpeed(data.count)
+        guard !(startOffSet == 0 && data.count <= 2) else {
+            return
+        }
         writeData(data, to: Range<Int>(uncheckedBounds: (startOffSet, startOffSet+data.count)))
         startOffSet = startOffSet+data.count
         if startOffSet >= BasicFileData.predownloadSize && onPredownload {
@@ -259,31 +264,40 @@ extension CacheFileHandler {
         guard savedCacheData.fileInfo.isEmptyInfo(), let r = response as? HTTPURLResponse else {
             return
         }
-        savedCacheData.fileInfo.contentType = r.mimeType ?? ""
+        if let mimeType = r.mimeType,
+            let uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType as CFString, nil)?.takeRetainedValue() {
+            savedCacheData.fileInfo.contentType = uti as String
+        }
         if let accept = r.allHeaderFields["Accept-Ranges"] as? String, accept == "bytes" {
             savedCacheData.fileInfo.byteRangeAccessSupported = true
         }
         if let range = r.allHeaderFields["content-range"] as? String,
             let totalRange = range.split(separator: "/").last,
-            let length = Double(String(totalRange)) {
+            let length = Int64(String(totalRange)) {
             savedCacheData.fileInfo.contentLength = length
         } else if let range = r.allHeaderFields["Content-Range"] as? String,
             let totalRange = range.split(separator: "/").last,
-            let length = Double(String(totalRange)) {
+            let length = Int64(String(totalRange)) {
             savedCacheData.fileInfo.contentLength = length
         } else if let range = r.allHeaderFields["Content-Length"] as? String,
-            let length = Double(String(range)) {
+            let length = Int64(String(range)) {
             savedCacheData.fileInfo.contentLength = length
         }
     }
     
     fileprivate func readSavedCacheData() {
-        guard CacheFilePathHelper.fileExistsAtPath(metaDataFilePath) else {
+        guard CacheFilePathHelper.fileExistsAtPath(metaDataFilePath),
+            CacheFilePathHelper.fileExistsAtPath(videoPath) else {
             return
         }
+        let fileLength = CacheFilePathHelper.fileSizeAtPath(videoPath)
         if let data = try? Data(contentsOf: URL(fileURLWithPath: metaDataFilePath)),
-            let savedData = try? JSONDecoder().decode(SavedCacheData.self, from: data) {
+            let savedData = try? JSONDecoder().decode(SavedCacheData.self, from: data),
+            savedData.fileInfo.downloadedContentLength == fileLength {
             savedCacheData = savedData
+        } else {
+            _ = CacheFilePathHelper.removeFileAtPath(metaDataFilePath)
+            _ = CacheFilePathHelper.removeFileAtPath(videoPath)
         }
     }
     

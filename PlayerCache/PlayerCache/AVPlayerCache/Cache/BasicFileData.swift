@@ -12,6 +12,7 @@ enum LogLevel: Int {
     case net = 0
     case file = 1
     case resource = 2
+    case dealloc = 99
     case error = 100
 }
 
@@ -24,10 +25,13 @@ class BasicFileData {
     static let localURLPrefix: String = "CacheUrlPrefix"
     
     static let logLevel: LogLevel = .net
-
 }
 
 class ItemURL {
+    deinit {
+        Cache_Print("deinit item url", level: LogLevel.dealloc)
+    }
+    
     var baseURLString: String = ""
     
     var url: URL? {

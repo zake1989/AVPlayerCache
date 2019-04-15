@@ -223,12 +223,21 @@ extension ItemPlayer {
         }
     }
     
-    func changeItemURL(_ item: AVAsset) {
+    func changeItem(_ playerItem: AVPlayerItem) {
+        player.pause()
+        self.playerItem = playerItem
+        self.itemAsset = playerItem.asset
+        if let item = self.playerItem {
+            replaceItemAndStartPlay(item)
+        }
+    }
+    
+    func changeItemURL(_ itemAsset: AVAsset) {
 //        guard self.itemURL != itemURL else {
 //            return
 //        }
         player.pause()
-        itemAsset = item
+        self.itemAsset = itemAsset
         // 输出 时间为 0
         // outSteamingTime.accept(kCMTimeZero)
         
@@ -354,9 +363,10 @@ extension ItemPlayer {
                                                     }
                                                 } else {
                                                     if #available(iOS 10.0, *) {
-                                                        print("not keep up reason: \(strongSelf.player.reasonForWaitingToPlay)")
-                                                    } else {
-                                                        // Fallback on earlier versions
+                                                        Player_Print("not keep up reason: \(String(describing: strongSelf.player.reasonForWaitingToPlay))")
+                                                        if strongSelf.player.reasonForWaitingToPlay != nil {
+                                                            strongSelf.actionWhenBufferingRateReason()
+                                                        }
                                                     }
                                                     strongSelf.actionWhenPerparing()
                                                 }
@@ -408,6 +418,28 @@ extension ItemPlayer {
         oldStatus = playStatus
         Player_Print("status change: change in preparing get old \(oldStatus)")
         playStatus = .preparing
+    }
+    
+    fileprivate func actionWhenBufferingRateReason() {
+        if #available(iOS 10.0, *) {
+            player.playImmediately(atRate: rate)
+        }
+        // 可以开始播放的状态 如果开启强制播放 就强制播放 如果没有开启强制播放 就保持暂停
+        if oldStatus == .playing || needForcePlay {
+            player.play()
+            if rate != 1.0 {
+                player.rate = rate
+            }
+            playStatus = .playing
+        } else {
+            if ((player.rate == 0) || (player.error != nil)) {
+                player.pause()
+                playStatus = .paused
+                Player_Print("status change: change after preparing pause")
+            }
+        }
+        oldStatus = .closed
+        Player_Print("status change: change after preparing get old \(oldStatus)")
     }
     
     fileprivate func setGravity() {
@@ -463,7 +495,6 @@ extension ItemPlayer {
     fileprivate func readyPlayerItem() {
         bufferObserver = nil
         steamProgressObserver = nil
-//        timer.cancel()
         
         NotificationCenter.default.removeObserver(self,
                                                   name: NSNotification.Name.AVPlayerItemDidPlayToEndTime,

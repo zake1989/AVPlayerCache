@@ -95,6 +95,20 @@ class CacheFilePathHelper: NSObject {
         }
         return true
     }
+    
+    open class func fileSizeAtPath(_ path: String) -> Int64 {
+        var fileSize : Int64 = 0
+        do {
+            //return [FileAttributeKey : Any]
+            let attr = try FileManager.default.attributesOfItem(atPath: path)
+            if let size = attr[FileAttributeKey.size] as? UInt64 {
+                fileSize = Int64(size)
+            }
+        } catch {
+            Cache_Print("Error: \(error)", level: LogLevel.error)
+        }
+        return fileSize
+    }
 }
 
 extension String {

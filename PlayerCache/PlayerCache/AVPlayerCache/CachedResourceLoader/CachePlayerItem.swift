@@ -15,7 +15,7 @@ class CachePlayerItem {
         Cache_Print("deinit cache player item", level: LogLevel.dealloc)
     }
     
-    let loader = CachedItemResourceLoader()
+    private lazy var loader = CachedItemResourceLoader()
     
     init() {
         
@@ -50,6 +50,7 @@ class CachePlayerItem {
         guard let url = URL(string: localURL) else {
             return nil
         }
+        loader = CachedItemResourceLoader()
         let asset = AVURLAsset(url: url)
         asset.resourceLoader.setDelegate(loader, queue: DispatchQueue.main)
         let item = AVPlayerItem(asset: asset)

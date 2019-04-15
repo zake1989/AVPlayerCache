@@ -46,7 +46,7 @@ class CachedItemResourceLoader: NSObject {
         }
     }
     
-    func processCurrentRequest(loadingRequest: AVAssetResourceLoadingRequest) {
+    fileprivate func processCurrentRequest(loadingRequest: AVAssetResourceLoadingRequest) {
         guard currentLoadingRequest == nil else {
             Cache_Print("loader not process request: request empty", level: LogLevel.resource)
             return

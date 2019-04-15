@@ -41,9 +41,9 @@ class ViewController: UIViewController {
         return AVPlayer(playerItem: item)
     }()
     
-    lazy var cachePlayerItem: CachePlayerItem = CachePlayerItem()
+    lazy var cachePlayerItem: CachePlayerItem? = CachePlayerItem()
     
-    lazy var item: AVPlayerItem? = cachePlayerItem.createPlayerItem(urlString)
+    lazy var item: AVPlayerItem? = cachePlayerItem?.createPlayerItem(urlString)
 //         cachePlayerItem.createPureOnlineItem(urlString)  cachePlayerItem.createPlayerItem(urlString)
     
     let loader = CachedItemResourceLoader()
@@ -67,6 +67,31 @@ class ViewController: UIViewController {
         slider.frame = CGRect(x: 10, y: view.frame.height-100, width: view.frame.width-20, height: 50)
         view.addSubview(slider)
         slider.addTarget(self, action: #selector(self.sliderValueChange), for: UIControl.Event.touchUpInside)
+        
+        let button = UIButton(frame: CGRect(x: 100, y: 100, width: 50, height: 50))
+        button.backgroundColor = UIColor.yellow
+        button.addTarget(self, action: #selector(self.replaceItem), for: .touchUpInside)
+        view.addSubview(button)
+        
+        let button2 = UIButton(frame: CGRect(x: 200, y: 100, width: 50, height: 50))
+        button2.backgroundColor = UIColor.red
+        button2.addTarget(self, action: #selector(self.clearAll), for: .touchUpInside)
+        view.addSubview(button2)
+    }
+    
+    @objc func replaceItem() {
+        item = cachePlayerItem?.createPlayerItem("https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f7e0000biirpudqg5b5btlhr6n0")
+        if let item = item {
+            itemPlayer?.changeItem(item)
+        }
+    }
+    
+    @objc func clearAll() {
+        itemPlayer?.pause()
+//        (item?.asset as? AVURLAsset)?.resourceLoader.setDelegate(nil, queue: nil)
+        itemPlayer = nil
+        item = nil
+        cachePlayerItem = nil
     }
     
     @objc func sliderValueChange() {

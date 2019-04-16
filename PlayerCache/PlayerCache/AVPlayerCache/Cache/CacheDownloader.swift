@@ -157,7 +157,7 @@ class CacheDownloader: NSObject {
         }
     }
     
-    func startDownload(from url: URL, at range: Range<Int>) {
+    func startDownload(from url: URL, at range: DataRange) {
         resetSession()
         createSession()
         self.url = url

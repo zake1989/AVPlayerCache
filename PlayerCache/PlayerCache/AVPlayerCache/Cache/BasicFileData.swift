@@ -24,7 +24,7 @@ class BasicFileData {
     
     static let localURLPrefix: String = "CacheUrlPrefix"
     
-    static let logLevel: LogLevel = .net
+    static let logLevel: LogLevel = .error
 }
 
 class ItemURL {
@@ -45,5 +45,7 @@ class ItemURL {
     static func onlineUrl(_ urlString: String) -> String {
         return urlString.replacingOccurrences(of: BasicFileData.localURLPrefix, with: "http")
     }
-    
 }
+
+typealias DataRange = Range<Int64>
+

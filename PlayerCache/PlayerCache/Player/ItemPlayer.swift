@@ -27,7 +27,7 @@ protocol ItemPlayerDelegate: class {
 
 class ItemPlayer {
     
-    static let needLog: Bool = true
+    static let needLog: Bool = false
     
     var itemDuration: CMTime {
         guard let playerItem = playerItem else {
@@ -104,7 +104,7 @@ class ItemPlayer {
     
     fileprivate var timeObserver: Any?
     
-    fileprivate var bufferDuration: TimeInterval = 0.1
+    fileprivate var bufferDuration: TimeInterval = 1
     
     fileprivate var bufferObserver: NSKeyValueObservation?
     
@@ -447,6 +447,9 @@ extension ItemPlayer {
             return
         }
         let size = item.presentationSize
+        guard !size.equalTo(CGSize.zero) else {
+            return
+        }
         var targetGravity: AVLayerVideoGravity = .resizeAspect
         if size.width > 0 && size.height > 0, 3*size.height/size.width > 4 {
             targetGravity = .resizeAspectFill

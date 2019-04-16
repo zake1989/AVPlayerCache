@@ -72,7 +72,7 @@ class CachedItemResourceLoader: NSObject {
     }
     
     fileprivate func requsetData(_ dataRequest: AVAssetResourceLoadingDataRequest) {
-        let range = Range<Int>.init(uncheckedBounds: (Int(dataRequest.requestedOffset), upper: Int(dataRequest.requestedOffset)+dataRequest.requestedLength))
+        let range = DataRange(uncheckedBounds: (Int64(dataRequest.requestedOffset), upper: Int64(dataRequest.requestedOffset)+Int64(dataRequest.requestedLength)))
         Cache_Print("loader Data requested at range : \(range)", level: LogLevel.resource)
         cacheFileHandler?.fetchData(at: range)
     }
@@ -92,7 +92,7 @@ extension CachedItemResourceLoader: FileDataDelegate {
         }
     }
     
-    func fileHandler(didFetch data: Data, at range: Range<Int>) {
+    func fileHandler(didFetch data: Data, at range: DataRange) {
         DispatchQueue.main.async {
             Cache_Print("loader fetched Data: \(data.count)", level: LogLevel.resource)
             if self.currentLoadingRequest?.contentInformationRequest == nil {

@@ -11,7 +11,7 @@ import MobileCoreServices
 
 protocol FileDataDelegate: class {
     func fileHandlerGetResponse(fileInfo info: CacheFileInfo, response: URLResponse?)
-    func fileHandler(didFetch data: Data, at range: Range<Int>)
+    func fileHandler(didFetch data: Data, at range: DataRange)
     func fileHandlerDidFinishFetchData(error: Error?)
 }
 
@@ -51,7 +51,7 @@ class CacheFileHandler {
     fileprivate var videoPath: String
     fileprivate var metaDataFilePath: String
     
-    fileprivate var startOffSet: Int = 0
+    fileprivate var startOffSet: Int64 = 0
     fileprivate var currentChunkList: [CacheMetaData] = []
     
     fileprivate var itemURL: ItemURL = ItemURL()
@@ -90,7 +90,7 @@ class CacheFileHandler {
     func perDownloadData() {
         let fileLength = Int(savedCacheData.fileInfo.contentLength)
         if fileLength != 0 {
-            fetchData(at: Range<Int>(uncheckedBounds: (0, BasicFileData.predownloadSize)))
+            fetchData(at: DataRange(uncheckedBounds: (0, Int64(BasicFileData.predownloadSize))))
         } else {
             guard !FileDownlaodingManager.shared.isDownloading(itemURL.baseURLString) else {
                 return
@@ -98,11 +98,11 @@ class CacheFileHandler {
             FileDownlaodingManager.shared.startDownloading(itemURL.baseURLString)
             onPredownload = true
             startOffSet = 0
-            downloadFileWithRange(Range<Int>(uncheckedBounds: (0, 0)))
+            downloadFileWithRange(DataRange(uncheckedBounds: (0, 0)))
         }
     }
     
-    func fetchData(at range: Range<Int>) {
+    func fetchData(at range: DataRange) {
         guard range.lowerBound < range.upperBound,
             !FileDownlaodingManager.shared.isDownloading(itemURL.baseURLString) else {
                 Cache_Print("loader data not fetched", level: LogLevel.resource)
@@ -122,10 +122,10 @@ class CacheFileHandler {
         var endRange = range
         let fileLength = Int(savedCacheData.fileInfo.contentLength)
         //        if range.upperBound - range.lowerBound > 2 && range.lowerBound == 0 {
-        //            endRange = Range<Int>.init(uncheckedBounds: (0, max(range.lowerBound, fileLength)))
+        //            endRange = DataRange.init(uncheckedBounds: (0, max(range.lowerBound, fileLength)))
         //        } else
         if fileLength != 0 && range.upperBound > fileLength {
-            endRange = Range<Int>.init(uncheckedBounds: (range.lowerBound, fileLength))
+            endRange = DataRange.init(uncheckedBounds: (range.lowerBound, Int64(fileLength)))
         }
         currentChunkList = savedCacheData.readChunkList(savedCacheData.chunkList, range: endRange)
         
@@ -140,7 +140,7 @@ class CacheFileHandler {
         delegate?.fileHandlerDidFinishFetchData(error: error)
     }
     
-    func stopAndFetch(at range: Range<Int>) {
+    func stopAndFetch(at range: DataRange) {
         forceStopCurrentProcess()
         fetchData(at: range)
     }
@@ -167,27 +167,27 @@ class CacheFileHandler {
         }
     }
     
-    fileprivate func downloadFileWithRange(_ range: Range<Int>) {
+    fileprivate func downloadFileWithRange(_ range: DataRange) {
         guard let url = itemURL.url else {
             return
         }
         downloader.startDownload(from: url, at: range)
     }
     
-    fileprivate func readFileWithRange(_ range: Range<Int>) {
+    fileprivate func readFileWithRange(_ range: DataRange) {
         guard let reader = fileReader else {
             return
         }
         var data = Data()
         fileOperationQueue.addOperation { [weak self] in
             reader.seek(toFileOffset: UInt64(range.lowerBound))
-            data = reader.readData(ofLength: range.upperBound-range.lowerBound)
+            data = reader.readData(ofLength: Int(range.upperBound-range.lowerBound))
             Cache_Print("data fetched on local: \(data.count)", level: LogLevel.file)
             self?.delegate?.fileHandler(didFetch: data, at: range)
         }
     }
     
-    fileprivate func writeData(_ data: Data, to range: Range<Int>) {
+    fileprivate func writeData(_ data: Data, to range: DataRange) {
         guard let writer = fileWriter else {
             return
         }
@@ -202,7 +202,7 @@ class CacheFileHandler {
         }
     }
     
-    fileprivate func saveRange(_ range: Range<Int>) {
+    fileprivate func saveRange(_ range: DataRange) {
         let metaData = CacheMetaData(type: .local, range: range)
         savedCacheData.inserRangeToList(&savedCacheData.chunkList, rr: metaData)
     }
@@ -240,8 +240,8 @@ extension CacheFileHandler: SessionOutputDelegate {
         guard !(startOffSet == 0 && data.count <= 2) else {
             return
         }
-        writeData(data, to: Range<Int>(uncheckedBounds: (startOffSet, startOffSet+data.count)))
-        startOffSet = startOffSet+data.count
+        writeData(data, to: DataRange(uncheckedBounds: (startOffSet, startOffSet+Int64(data.count))))
+        startOffSet = startOffSet+Int64(data.count)
         if startOffSet >= BasicFileData.predownloadSize && onPredownload {
             downloader.stopDownload()
             processChunk()

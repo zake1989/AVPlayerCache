@@ -57,6 +57,7 @@ class ViewController: UIViewController {
             let layer = player.playerLayer
             layer.frame = view.frame
             view.layer.addSublayer(layer)
+            player.seek(0.3)
             player.play()
         } else {
             let layer = AVPlayerLayer(player: player)
@@ -136,7 +137,7 @@ extension ViewController: FileDataDelegate {
         print("test file info get")
     }
     
-    func fileHandler(didFetch data: Data, at range: Range<Int>) {
+    func fileHandler(didFetch data: Data, at range: DataRange) {
         print("test data get")
     }
     
@@ -145,7 +146,7 @@ extension ViewController: FileDataDelegate {
     }
     
     func testCache() {
-        let range: Range<Int> = Range<Int>(uncheckedBounds: (0, 2000*1024))
+        let range: DataRange = DataRange(uncheckedBounds: (0, 2000*1024))
         cacheFileHandler.delegate = self
         cacheFileHandler.fetchData(at: range)
         cacheFileHandler.perDownloadData()
@@ -166,7 +167,7 @@ extension ViewController: FileDataDelegate {
     }
     
     @objc func start() {
-        let range: Range<Int> = Range<Int>(uncheckedBounds: (0, 2000*1024))
+        let range: DataRange = DataRange(uncheckedBounds: (0, 2000*1024))
         cacheFileHandler.fetchData(at: range)
     }
 }

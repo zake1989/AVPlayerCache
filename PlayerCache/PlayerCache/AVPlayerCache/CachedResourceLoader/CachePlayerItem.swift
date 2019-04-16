@@ -22,11 +22,11 @@ class CachePlayerItem {
     }
     
     func createPlayerItem(_ urlString: String) -> AVPlayerItem? {
-//        if CacheFileHandler.isFullyDownload(videoUrl: urlString) {
-//            return createLocalItem(urlString)
-//        } else {
+        if CacheFileHandler.isFullyDownload(videoUrl: urlString) {
+            return createLocalItem(urlString)
+        } else {
             return createOnlineItem(urlString)
-//        }
+        }
     }
     
     func createPureOnlineItem(_ urlString: String) -> AVPlayerItem? {
@@ -55,9 +55,9 @@ class CachePlayerItem {
         asset.resourceLoader.setDelegate(loader, queue: DispatchQueue.main)
         let item = AVPlayerItem(asset: asset)
         item.canUseNetworkResourcesForLiveStreamingWhilePaused = true
-        item.preferredPeakBitRate = 1024*100
+//        item.preferredPeakBitRate = 1000*10
         if #available(iOS 10.0, *) {
-            item.preferredForwardBufferDuration = 10
+//            item.preferredForwardBufferDuration = 1
         }
         return item
     }

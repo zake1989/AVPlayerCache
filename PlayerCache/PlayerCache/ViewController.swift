@@ -24,7 +24,7 @@ import AVFoundation
 
 class ViewController: UIViewController {
     
-    let urlString: String = "https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f880000bii87pveqk816g9s7ql0"
+    let urlString: String = "https://cdn.palm-chat.com/V/da805946-94ec-4614-8e65-d2f25709ec83_z.mp4"
 
     lazy var cacheFileHandler: CacheFileHandler = CacheFileHandler(videoUrl: urlString)
     
@@ -57,8 +57,9 @@ class ViewController: UIViewController {
             let layer = player.playerLayer
             layer.frame = view.frame
             view.layer.addSublayer(layer)
-            player.seek(0.3)
+//            player.seek(0.5)
             player.play()
+            print("play time: play call at \(Date().timeIntervalSince1970)")
         } else {
             let layer = AVPlayerLayer(player: player)
             layer.frame = view.frame
@@ -123,7 +124,9 @@ extension ViewController: ItemPlayerDelegate {
     }
     
     func playStateChange(_ oldStatus: ItemPlayerStatus, playerStatus: ItemPlayerStatus) {
-        
+        if playerStatus == .playing {
+            print("play time: play start at \(Date().timeIntervalSince1970)")
+        }
     }
     
     func didReachEnd() {
@@ -146,7 +149,7 @@ extension ViewController: FileDataDelegate {
     }
     
     func testCache() {
-        let range: DataRange = DataRange(uncheckedBounds: (0, 2000*1024))
+        let range: DataRange = DataRange(uncheckedBounds: (0, 2000*1000))
         cacheFileHandler.delegate = self
         cacheFileHandler.fetchData(at: range)
         cacheFileHandler.perDownloadData()
@@ -167,7 +170,7 @@ extension ViewController: FileDataDelegate {
     }
     
     @objc func start() {
-        let range: DataRange = DataRange(uncheckedBounds: (0, 2000*1024))
+        let range: DataRange = DataRange(uncheckedBounds: (0, 2000*1000))
         cacheFileHandler.fetchData(at: range)
     }
 }

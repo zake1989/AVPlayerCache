@@ -17,8 +17,8 @@ enum LogLevel: Int {
 }
 
 class BasicFileData {
-    static let bufferSize: Int = 15*1024
-    static let predownloadSize: Int = 200*1024
+    static let bufferSize: Int = 50*1000
+    static let predownloadSize: Int = 500*1000
     static let dataHandleQueueLabel: String = "VideoDataHandleQueue"
     static let sessionOperationQueueName: String = "VideoDownloadSessionQueue"
     

@@ -215,7 +215,7 @@ class CacheFileHandler {
         let currentTime = Date().timeIntervalSince1970
         let time = max(currentTime - lastTime, 0)
         if time > 0 {
-            savedCacheData.downloadSpeed = Int(Double(bytes)/(time*1024))
+            savedCacheData.downloadSpeed = Int(Double(bytes)/(time*1000))
             lastTime = currentTime
             Cache_Print("download speed: \(savedCacheData.downloadSpeed)", level: LogLevel.file)
         }

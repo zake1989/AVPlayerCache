@@ -154,7 +154,7 @@ class ItemPlayer {
     fileprivate func initOnPlayer() {
         playerLayer.backgroundColor = UIColor.black.cgColor
         if #available(iOS 10.0, *) {
-            player.automaticallyWaitsToMinimizeStalling = true
+            player.automaticallyWaitsToMinimizeStalling = false
         }
         // 添加事件机制
         addVideoEventHandle()
@@ -313,7 +313,6 @@ extension ItemPlayer {
                                                         }
                                                         let itemDuration = strongSelf.itemDuration.seconds
                                                         let steamingTime = strongSelf.outputSteamingProgress()
-                                                        
                                                         strongSelf.itemPlayerDelegate?.steamingAtTime(steamingTime,
                                                                                                       itemDuration: itemDuration)
         })
@@ -423,10 +422,11 @@ extension ItemPlayer {
     fileprivate func actionWhenBufferingRateReason() {
         if #available(iOS 10.0, *) {
             player.playImmediately(atRate: rate)
+        } else {
+            player.play()
         }
         // 可以开始播放的状态 如果开启强制播放 就强制播放 如果没有开启强制播放 就保持暂停
         if oldStatus == .playing || needForcePlay {
-            player.play()
             if rate != 1.0 {
                 player.rate = rate
             }

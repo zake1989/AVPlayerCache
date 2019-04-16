@@ -75,6 +75,7 @@ class CachedItemResourceLoader: NSObject {
         let range = DataRange(uncheckedBounds: (Int64(dataRequest.requestedOffset), upper: Int64(dataRequest.requestedOffset)+Int64(dataRequest.requestedLength)))
         Cache_Print("loader Data requested at range : \(range)", level: LogLevel.resource)
         cacheFileHandler?.fetchData(at: range)
+        print("play time: data start fetch at \(Date().timeIntervalSince1970)")
     }
     
 }
@@ -89,6 +90,7 @@ extension CachedItemResourceLoader: FileDataDelegate {
             infoRequest.contentType = info.contentType
             infoRequest.contentLength = Int64(info.contentLength)
             infoRequest.isByteRangeAccessSupported = info.byteRangeAccessSupported
+            print("play time: header fetch at \(Date().timeIntervalSince1970)")
         }
     }
     
@@ -110,6 +112,7 @@ extension CachedItemResourceLoader: FileDataDelegate {
                 Cache_Print("loader finish fetch data", level: LogLevel.resource)
                 self.currentLoadingRequest?.finishLoading()
             }
+            print("play time: fetch finish at \(Date().timeIntervalSince1970)")
             self.processPendingRequests()
         }
     }

@@ -115,7 +115,7 @@ struct SavedCacheData: Codable {
 struct CacheMetaData: Equatable, Codable {
     var type: CacheType
     var range: DataRange
-
+    
     init(type: CacheType, range: DataRange) {
         self.type = type
         self.range = range
@@ -147,8 +147,9 @@ struct CacheFileInfo: Codable {
     var byteRangeAccessSupported: Bool = false
     var contentLength: Int64 = 0
     var downloadedContentLength: Int64 = 0
+    var downloadedTotalTime: Int64 = 0  // ms
     
     func isEmptyInfo() -> Bool {
-        return contentType == "" || contentLength == 0
+        return contentType == "" || contentLength == 0 || !byteRangeAccessSupported
     }
 }

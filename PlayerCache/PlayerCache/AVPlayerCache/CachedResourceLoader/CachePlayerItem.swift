@@ -55,9 +55,9 @@ class CachePlayerItem {
         asset.resourceLoader.setDelegate(loader, queue: DispatchQueue.main)
         let item = AVPlayerItem(asset: asset)
         item.canUseNetworkResourcesForLiveStreamingWhilePaused = true
-//        item.preferredPeakBitRate = 1000*10
+        item.preferredPeakBitRate = 1000*100
         if #available(iOS 10.0, *) {
-//            item.preferredForwardBufferDuration = 1
+            item.preferredForwardBufferDuration = 1
         }
         return item
     }

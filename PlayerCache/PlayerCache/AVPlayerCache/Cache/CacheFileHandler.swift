@@ -19,6 +19,7 @@ class CacheFileHandler {
     
     deinit {
         Cache_Print("deinit cache file handler", level: LogLevel.dealloc)
+        forceStopCurrentProcess()
         saveCachedData()
         fileReader?.closeFile()
         fileWriter?.closeFile()
@@ -58,10 +59,16 @@ class CacheFileHandler {
     
     fileprivate var lastTime: TimeInterval = 0
     
+    fileprivate var timeTake: Int64 = 0
+    
     fileprivate var onPredownload: Bool = false
     
     fileprivate var savedCacheData: SavedCacheData = {
-        let info = CacheFileInfo(contentType: "", byteRangeAccessSupported: false, contentLength: 0, downloadedContentLength: 0)
+        let info = CacheFileInfo(contentType: "",
+                                 byteRangeAccessSupported: false,
+                                 contentLength: 0,
+                                 downloadedContentLength: 0,
+                                 downloadedTotalTime: 0)
         return SavedCacheData(chunkList: [], fileInfo: info, downloadSpeed: 0)
     }()
     
@@ -171,6 +178,7 @@ class CacheFileHandler {
         guard let url = itemURL.url else {
             return
         }
+        setStartTime()
         downloader.startDownload(from: url, at: range)
     }
     
@@ -197,6 +205,8 @@ class CacheFileHandler {
             }
             writer.seek(toFileOffset: UInt64(range.lowerBound))
             writer.write(data)
+            strongSelf.countSpeed(Int64(data.count))
+            strongSelf.savedCacheData.fileInfo.downloadedTotalTime += strongSelf.timeTake
             strongSelf.saveRange(range)
             strongSelf.delegate?.fileHandler(didFetch: data, at: range)
         }
@@ -211,23 +221,22 @@ class CacheFileHandler {
         lastTime = Date().timeIntervalSince1970
     }
     
-    fileprivate func countSpeed(_ bytes: Int) {
+    fileprivate func countSpeed(_ bytes: Int64) {
         let currentTime = Date().timeIntervalSince1970
-        let time = max(currentTime - lastTime, 0)
-        if time > 0 {
-            savedCacheData.downloadSpeed = Int(Double(bytes)/(time*1000))
+        timeTake = Int64(max(currentTime - lastTime, 0)*1000)
+        if timeTake > 0 {
+            savedCacheData.downloadSpeed = Int(bytes/(timeTake))
             lastTime = currentTime
             Cache_Print("download speed: \(savedCacheData.downloadSpeed)", level: LogLevel.file)
         }
     }
-
+    
 }
 
 extension CacheFileHandler: SessionOutputDelegate {
     
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse) {
         let needResponse = savedCacheData.fileInfo.isEmptyInfo()
-        setStartTime()
         readCacheFileInfo(from: response)
         if needResponse {
             delegate?.fileHandlerGetResponse(fileInfo: savedCacheData.fileInfo, response: response)
@@ -236,7 +245,6 @@ extension CacheFileHandler: SessionOutputDelegate {
     
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         Cache_Print("data fetched on remote: \(data.count)", level: LogLevel.file)
-        countSpeed(data.count)
         guard !(startOffSet == 0 && data.count <= 2) else {
             return
         }
@@ -271,6 +279,9 @@ extension CacheFileHandler {
         if let accept = r.allHeaderFields["Accept-Ranges"] as? String, accept == "bytes" {
             savedCacheData.fileInfo.byteRangeAccessSupported = true
         }
+        if let range = r.allHeaderFields["Content-Range"] as? String, range.contains("bytes") {
+            savedCacheData.fileInfo.byteRangeAccessSupported = true
+        }
         if let range = r.allHeaderFields["content-range"] as? String,
             let totalRange = range.split(separator: "/").last,
             let length = Int64(String(totalRange)) {
@@ -288,7 +299,7 @@ extension CacheFileHandler {
     fileprivate func readSavedCacheData() {
         guard CacheFilePathHelper.fileExistsAtPath(metaDataFilePath),
             CacheFilePathHelper.fileExistsAtPath(videoPath) else {
-            return
+                return
         }
         let fileLength = CacheFilePathHelper.fileSizeAtPath(videoPath)
         if let data = try? Data(contentsOf: URL(fileURLWithPath: metaDataFilePath)),

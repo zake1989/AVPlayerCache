@@ -108,7 +108,7 @@ class SessionDataForworder: NSObject, URLSessionDataDelegate {
                     dataTask: URLSessionDataTask,
                     willCacheResponse proposedResponse: CachedURLResponse,
                     completionHandler: @escaping (CachedURLResponse?) -> Void) {
-        
+        completionHandler(proposedResponse)
     }
     
     func urlSession(_ session: URLSession,

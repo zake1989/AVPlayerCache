@@ -15,7 +15,7 @@ class CachedItemResourceLoader: NSObject {
     }
     
     var loadingRequestList: [AVAssetResourceLoadingRequest] = []
-
+    
     var seekingRequestList: [AVAssetResourceLoadingRequest] = []
     
     var currentLoadingRequest: AVAssetResourceLoadingRequest?

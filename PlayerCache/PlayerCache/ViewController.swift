@@ -53,61 +53,9 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
-        if let player = itemPlayer {
-            let layer = player.playerLayer
-            layer.frame = view.frame
-            view.layer.addSublayer(layer)
-//            player.seek(0.5)
-            player.play()
-            print("play time: play call at \(Date().timeIntervalSince1970)")
-        } else {
-            let layer = AVPlayerLayer(player: player)
-            layer.frame = view.frame
-            view.layer.addSublayer(layer)
-            player?.play()
-        }
-        slider.frame = CGRect(x: 10, y: view.frame.height-100, width: view.frame.width-20, height: 50)
-        view.addSubview(slider)
-        slider.addTarget(self, action: #selector(self.sliderValueChange), for: UIControl.Event.touchUpInside)
-        
-        let button = UIButton(frame: CGRect(x: 100, y: 100, width: 50, height: 50))
-        button.backgroundColor = UIColor.yellow
-        button.addTarget(self, action: #selector(self.replaceItem), for: .touchUpInside)
-        view.addSubview(button)
-        
-        let button2 = UIButton(frame: CGRect(x: 200, y: 100, width: 50, height: 50))
-        button2.backgroundColor = UIColor.red
-        button2.addTarget(self, action: #selector(self.clearAll), for: .touchUpInside)
-        view.addSubview(button2)
+        testCache()
     }
     
-    @objc func replaceItem() {
-        item = cachePlayerItem?.createPlayerItem("https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f7e0000biirpudqg5b5btlhr6n0")
-        if let item = item {
-            itemPlayer?.changeItem(item)
-        }
-    }
-    
-    @objc func clearAll() {
-        itemPlayer?.pause()
-//        (item?.asset as? AVURLAsset)?.resourceLoader.setDelegate(nil, queue: nil)
-        itemPlayer = nil
-        item = nil
-        cachePlayerItem = nil
-    }
-    
-    @objc func sliderValueChange() {
-        guard let duration = item?.duration else {
-            return
-        }
-        print(slider.value)
-        if let player = itemPlayer {
-            player.fastSeek(Double(slider.value))
-//            player.seek(Double(slider.value))
-        } else {
-            player?.seek(to: CMTime(seconds: duration.seconds*Double(slider.value), preferredTimescale: duration.timescale))
-        }
-    }
 }
 
 extension ViewController: ItemPlayerDelegate {
@@ -149,10 +97,10 @@ extension ViewController: FileDataDelegate {
     }
     
     func testCache() {
-        let range: DataRange = DataRange(uncheckedBounds: (0, 2000*1000))
+        let range: DataRange = DataRange(uncheckedBounds: (0, 2))
         cacheFileHandler.delegate = self
         cacheFileHandler.fetchData(at: range)
-        cacheFileHandler.perDownloadData()
+//        cacheFileHandler.perDownloadData()
         
         let button = UIButton(frame: CGRect(x: 100, y: 100, width: 50, height: 50))
         button.backgroundColor = UIColor.yellow
@@ -172,5 +120,64 @@ extension ViewController: FileDataDelegate {
     @objc func start() {
         let range: DataRange = DataRange(uncheckedBounds: (0, 2000*1000))
         cacheFileHandler.fetchData(at: range)
+    }
+}
+
+extension ViewController {
+    func playerTest() {
+        if let player = itemPlayer {
+            let layer = player.playerLayer
+            layer.frame = view.frame
+            view.layer.addSublayer(layer)
+            //            player.seek(0.5)
+            player.play()
+            print("play time: play call at \(Date().timeIntervalSince1970)")
+        } else {
+            let layer = AVPlayerLayer(player: player)
+            layer.frame = view.frame
+            view.layer.addSublayer(layer)
+            player?.play()
+        }
+        slider.frame = CGRect(x: 10, y: view.frame.height-100, width: view.frame.width-20, height: 50)
+        view.addSubview(slider)
+        slider.addTarget(self, action: #selector(self.sliderValueChange), for: UIControl.Event.touchUpInside)
+        
+        let button = UIButton(frame: CGRect(x: 100, y: 100, width: 50, height: 50))
+        button.backgroundColor = UIColor.yellow
+        button.addTarget(self, action: #selector(self.replaceItem), for: .touchUpInside)
+        view.addSubview(button)
+        
+        let button2 = UIButton(frame: CGRect(x: 200, y: 100, width: 50, height: 50))
+        button2.backgroundColor = UIColor.red
+        button2.addTarget(self, action: #selector(self.clearAll), for: .touchUpInside)
+        view.addSubview(button2)
+    }
+    
+    @objc func replaceItem() {
+        item = cachePlayerItem?.createPlayerItem("https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f7e0000biirpudqg5b5btlhr6n0")
+        if let item = item {
+            itemPlayer?.changeItem(item)
+        }
+    }
+    
+    @objc func clearAll() {
+        itemPlayer?.pause()
+        //        (item?.asset as? AVURLAsset)?.resourceLoader.setDelegate(nil, queue: nil)
+        itemPlayer = nil
+        item = nil
+        cachePlayerItem = nil
+    }
+    
+    @objc func sliderValueChange() {
+        guard let duration = item?.duration else {
+            return
+        }
+        print(slider.value)
+        if let player = itemPlayer {
+            player.fastSeek(Double(slider.value))
+            //            player.seek(Double(slider.value))
+        } else {
+            player?.seek(to: CMTime(seconds: duration.seconds*Double(slider.value), preferredTimescale: duration.timescale))
+        }
     }
 }

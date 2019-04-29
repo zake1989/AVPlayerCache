@@ -9,10 +9,16 @@
 import UIKit
 import AVFoundation
 
+protocol CachedItemHandleDelegate: class {
+    func needRecoverFromError()
+}
+
 class CachedItemResourceLoader: NSObject {
     deinit {
         Cache_Print("deinit cached item resource loader", level: LogLevel.resource)
     }
+    
+    weak var delegate: CachedItemHandleDelegate?
     
     var loadingRequestList: [AVAssetResourceLoadingRequest] = []
     
@@ -75,7 +81,7 @@ class CachedItemResourceLoader: NSObject {
         let range = DataRange(uncheckedBounds: (Int64(dataRequest.requestedOffset), upper: Int64(dataRequest.requestedOffset)+Int64(dataRequest.requestedLength)))
         Cache_Print("loader Data requested at range : \(range)", level: LogLevel.resource)
         cacheFileHandler?.fetchData(at: range)
-        print("play time: data start fetch at \(Date().timeIntervalSince1970)")
+        Cache_Print("play time: data start fetch at \(Date().timeIntervalSince1970)", level: LogLevel.resource)
     }
     
 }
@@ -90,7 +96,7 @@ extension CachedItemResourceLoader: FileDataDelegate {
             infoRequest.contentType = info.contentType
             infoRequest.contentLength = Int64(info.contentLength)
             infoRequest.isByteRangeAccessSupported = info.byteRangeAccessSupported
-            print("play time: header fetch at \(Date().timeIntervalSince1970)")
+            Cache_Print("play time: header fetch at \(Date().timeIntervalSince1970)", level: LogLevel.resource)
         }
     }
     
@@ -108,11 +114,12 @@ extension CachedItemResourceLoader: FileDataDelegate {
             if let e = error, (e as NSError).code != NSURLErrorCancelled {
                 Cache_Print("loader finish fetch data with error", level: LogLevel.resource)
                 self.currentLoadingRequest?.finishLoading(with: e)
+                self.delegate?.needRecoverFromError()
             } else {
                 Cache_Print("loader finish fetch data", level: LogLevel.resource)
                 self.currentLoadingRequest?.finishLoading()
             }
-            print("play time: fetch finish at \(Date().timeIntervalSince1970)")
+            Cache_Print("play time: fetch finish at \(Date().timeIntervalSince1970)", level: LogLevel.resource)
             self.processPendingRequests()
         }
     }

@@ -11,6 +11,8 @@ import AVFoundation
 
 class CachePlayerItem {
     
+    var errorHandle: (()->Void)?
+    
     deinit {
         Cache_Print("deinit cache player item", level: LogLevel.dealloc)
     }
@@ -51,6 +53,7 @@ class CachePlayerItem {
             return nil
         }
         loader = CachedItemResourceLoader()
+        loader.delegate = self
         let asset = AVURLAsset(url: url)
         asset.resourceLoader.setDelegate(loader, queue: DispatchQueue.main)
         let item = AVPlayerItem(asset: asset)
@@ -62,4 +65,12 @@ class CachePlayerItem {
         return item
     }
     
+}
+
+extension CachePlayerItem: CachedItemHandleDelegate {
+    func needRecoverFromError() {
+        if let error = errorHandle {
+            error()
+        }
+    }
 }

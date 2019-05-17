@@ -53,7 +53,8 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
-        testCache()
+//        testCache()
+        playerTest()
     }
     
 }
@@ -156,7 +157,13 @@ extension ViewController {
     @objc func replaceItem() {
         item = cachePlayerItem?.createPlayerItem("https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f7e0000biirpudqg5b5btlhr6n0")
         if let item = item {
-            itemPlayer?.changeItem(item)
+            itemPlayer?.changeItem(item,needRecreatePlayer: true)
+            if let player = itemPlayer {
+                let layer = player.playerLayer
+                layer.frame = view.frame
+                view.layer.insertSublayer(layer, below: slider.layer)
+                player.play()
+            }
         }
     }
     

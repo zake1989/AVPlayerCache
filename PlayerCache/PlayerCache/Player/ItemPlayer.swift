@@ -30,14 +30,14 @@ class ItemPlayer {
     static let needLog: Bool = false
     
     var itemDuration: CMTime {
-        guard let playerItem = playerItem else {
+        guard let playerItem = player.currentItem else {
             return CMTime.init(seconds: 0.0, preferredTimescale: CMTimeScale(30.0))
         }
         return playerItem.duration
     }
     
     var currentTime: CMTime {
-        guard let playerItem = playerItem else {
+        guard let playerItem = player.currentItem else {
             return CMTime.init(seconds: 0.0, preferredTimescale: CMTimeScale(30.0))
         }
         return playerItem.currentTime()
@@ -98,17 +98,17 @@ class ItemPlayer {
     
     fileprivate var player: AVPlayer
     
-    fileprivate var playerItem: AVPlayerItem?
-    
     fileprivate(set) var itemAsset: AVAsset
     
     fileprivate var timeObserver: Any?
     
-    fileprivate var bufferDuration: TimeInterval = 1
+    fileprivate var bufferDuration: TimeInterval = 0.01
     
-    fileprivate var bufferObserver: NSKeyValueObservation?
+    fileprivate var playBackStatusObserver: NSKeyValueObservation?
     
     fileprivate var steamProgressObserver: NSKeyValueObservation?
+    
+    fileprivate var timeControllObserver: NSKeyValueObservation?
     
     fileprivate var atEnd: Bool = false
     
@@ -116,7 +116,12 @@ class ItemPlayer {
     
     fileprivate var rate: Float = 1.0
     
+    fileprivate var lastTimeControllNumber: Int = -1
+    
+    fileprivate var playOnNilKeepUpReason: Bool = true
+    
     deinit {
+        print("deinit video player")
         Player_Print("deinit video player")
         if let item = player.currentItem {
             NotificationCenter.default.removeObserver(self,
@@ -131,20 +136,19 @@ class ItemPlayer {
     
     init(item: AVPlayerItem) {
         itemAsset = item.asset
-        playerItem = item
         if #available(iOS 10.0, *) {
-            playerItem?.preferredForwardBufferDuration = bufferDuration
+            item.preferredForwardBufferDuration = bufferDuration
         }
-        player = AVPlayer(playerItem: playerItem)
+        player = AVPlayer(playerItem: item)
         playerLayer = AVPlayerLayer(player: player)
         initOnPlayer()
     }
     
     init(asset: AVAsset) {
         itemAsset = asset
-        playerItem = AVPlayerItem(asset: itemAsset)
+        let playerItem = AVPlayerItem(asset: itemAsset)
         if #available(iOS 10.0, *) {
-            playerItem?.preferredForwardBufferDuration = bufferDuration
+            playerItem.preferredForwardBufferDuration = bufferDuration
         }
         player = AVPlayer(playerItem: playerItem)
         playerLayer = AVPlayerLayer(player: player)
@@ -152,9 +156,9 @@ class ItemPlayer {
     }
     
     fileprivate func initOnPlayer() {
-        playerLayer.backgroundColor = UIColor.black.cgColor
+        playerLayer.backgroundColor = UIColor.clear.cgColor
         if #available(iOS 10.0, *) {
-            player.automaticallyWaitsToMinimizeStalling = false
+            player.automaticallyWaitsToMinimizeStalling = true
         }
         // 添加事件机制
         addVideoEventHandle()
@@ -171,6 +175,12 @@ class ItemPlayer {
             return
         }
         itemPlayerDelegate?.itemTotalDuration(itemDuration.seconds)
+    }
+    
+    func stopPlayer() {
+        player.pause()
+        player.replaceCurrentItem(with: nil)
+        resetPlayerItemInfo()
     }
 }
 
@@ -223,27 +233,23 @@ extension ItemPlayer {
         }
     }
     
-    func changeItem(_ playerItem: AVPlayerItem) {
+    func changeItem(_ playerItem: AVPlayerItem, needRecreatePlayer: Bool = false) {
         player.pause()
-        self.playerItem = playerItem
+        playStatus = .preparing
         self.itemAsset = playerItem.asset
-        if let item = self.playerItem {
-            replaceItemAndStartPlay(item)
+        resetPlayerItemInfo()
+        if needRecreatePlayer {
+            recreatePlayer(playerItem)
+        } else {
+            replaceItemAndStartPlay(playerItem)
         }
     }
     
     func changeItemURL(_ itemAsset: AVAsset) {
-//        guard self.itemURL != itemURL else {
-//            return
-//        }
         player.pause()
-        self.itemAsset = itemAsset
-        // 输出 时间为 0
-        // outSteamingTime.accept(kCMTimeZero)
-        
-        readyPlayerItem()
-        
         playStatus = .preparing
+        self.itemAsset = itemAsset
+        readyPlayerItem()
     }
     
     func fastSeek(_ progress: Double) {
@@ -293,6 +299,17 @@ extension ItemPlayer {
     func setPlaySpeed(_ speed: Double) {
         rate = Float(speed)
     }
+    
+    func setGravityWith(_ size: CGSize) {
+        var targetGravity: AVLayerVideoGravity = .resizeAspectFill
+        if size.width > 0 && size.height > 0, 3*size.height/size.width < 4 {
+            targetGravity = .resizeAspect
+        }
+        if playerLayer.videoGravity != targetGravity {
+            playerLayer.videoGravity = targetGravity
+        }
+        playerLayer.removeAllAnimations()
+    }
 }
 
 // MARK: - 播放器事件处理
@@ -305,21 +322,23 @@ extension ItemPlayer {
     }
     // 播放器缓冲进度输出
     fileprivate func startSteamingHandler() {
-        steamProgressObserver = playerItem?.observe(\AVPlayerItem.loadedTimeRanges,
-                                                    options: [.new],
-                                                    changeHandler: { [weak self] (item, value) in
-                                                        guard let strongSelf = self else {
-                                                            return
-                                                        }
-                                                        let itemDuration = strongSelf.itemDuration.seconds
-                                                        let steamingTime = strongSelf.outputSteamingProgress()
-                                                        strongSelf.itemPlayerDelegate?.steamingAtTime(steamingTime,
-                                                                                                      itemDuration: itemDuration)
+        guard let playerItem = player.currentItem else { return }
+        steamProgressObserver = playerItem.observe(\AVPlayerItem.loadedTimeRanges,
+                                                   options: [.new],
+                                                   changeHandler: { [weak self] (item, value) in
+                                                    guard let strongSelf = self else {
+                                                        return
+                                                    }
+                                                    let itemDuration = strongSelf.itemDuration.seconds
+                                                    let steamingTime = strongSelf.outputSteamingProgress()
+                                                    strongSelf.itemPlayerDelegate?.steamingAtTime(steamingTime,
+                                                                                                  itemDuration: itemDuration)
         })
     }
     
     // 播放器到最后
     fileprivate func videoPlayToEndHandle() {
+        guard let playerItem = player.currentItem else { return }
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(didReachEnd),
                                                name: NSNotification.Name.AVPlayerItemDidPlayToEndTime,
@@ -327,7 +346,7 @@ extension ItemPlayer {
     }
     // 播放器进度输出
     fileprivate func addVideoProgressHandle() {
-        let interval = CMTime(seconds: 0.05, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+        let interval = CMTime(seconds: 0.1, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         timeObserver = player.addPeriodicTimeObserver(forInterval: interval,
                                                       queue: DispatchQueue.main,
                                                       using: { [weak self] (time) in
@@ -338,6 +357,11 @@ extension ItemPlayer {
                                                         if itemDuration == Double.nan {
                                                             itemDuration = 0
                                                         }
+                                                        if time.seconds > 0 &&
+                                                            strongSelf.playStatus != .paused &&
+                                                            strongSelf.playStatus != .playing {
+                                                            strongSelf.playStatus = .playing
+                                                        }
                                                         strongSelf.itemPlayerDelegate?.playAtTime(time.seconds,
                                                                                                   itemDuration: itemDuration,
                                                                                                   progress: strongSelf.progress)
@@ -346,29 +370,47 @@ extension ItemPlayer {
     
     // 播放器状态输出
     fileprivate func bufferStatusObserver() {
-        guard let playerItem = playerItem else { return }
-        bufferObserver = playerItem.observe(\AVPlayerItem.isPlaybackLikelyToKeepUp,
-                                            options: [.new,.old],
-                                            changeHandler: { [weak self] (item, keepUp) in
-                                                guard let strongSelf = self else {
+        guard let playerItem = player.currentItem else { return }
+        playBackStatusObserver = playerItem.observe(\AVPlayerItem.isPlaybackLikelyToKeepUp,
+                                                    options: [.new,.old],
+                                                    changeHandler: { [weak self] (item, keepUp) in
+                                                        guard let strongSelf = self else {
+                                                            return
+                                                        }
+                                                        strongSelf.setGravity()
+                                                        if item.isPlaybackLikelyToKeepUp {
+                                                            if strongSelf.seekProgressAfterPrepare > 0 {
+                                                                strongSelf.seekOnPrepare()
+                                                            } else {
+                                                                strongSelf.actionWhenReadyToPlay()
+                                                            }
+                                                        } else {
+                                                            if #available(iOS 10.0, *) {
+                                                                Player_Print("not keep up reason: \(String(describing: strongSelf.player.reasonForWaitingToPlay))")
+                                                                if (strongSelf.player.reasonForWaitingToPlay == nil && strongSelf.playOnNilKeepUpReason) {
+                                                                    strongSelf.playOnNilKeepUpReason = false
+                                                                    strongSelf.actionWhenBufferingRateReason()
+                                                                } else if strongSelf.player.reasonForWaitingToPlay == AVPlayer.WaitingReason.toMinimizeStalls {
+                                                                    //                                                            strongSelf.actionWhenBufferingRateReason()
+                                                                }
+                                                            }
+                                                            strongSelf.actionWhenPerparing()
+                                                        }
+        })
+    }
+    
+    fileprivate func addTimeControllObserver() {
+        guard #available(iOS 10.0, *) else {
+            return
+        }
+        timeControllObserver = player.observe(\AVPlayer.timeControlStatus,
+                                              options: [.old, .new],
+                                              changeHandler: { [weak self] (player, value) in
+                                                guard self?.lastTimeControllNumber == player.timeControlStatus.rawValue else {
+                                                    self?.lastTimeControllNumber = player.timeControlStatus.rawValue
                                                     return
                                                 }
-                                                strongSelf.setGravity()
-                                                if item.isPlaybackLikelyToKeepUp {
-                                                    if strongSelf.seekProgressAfterPrepare > 0 {
-                                                        strongSelf.seekOnPrepare()
-                                                    } else {
-                                                        strongSelf.actionWhenReadyToPlay()
-                                                    }
-                                                } else {
-                                                    if #available(iOS 10.0, *) {
-                                                        Player_Print("not keep up reason: \(String(describing: strongSelf.player.reasonForWaitingToPlay))")
-                                                        if strongSelf.player.reasonForWaitingToPlay != nil {
-                                                            strongSelf.actionWhenBufferingRateReason()
-                                                        }
-                                                    }
-                                                    strongSelf.actionWhenPerparing()
-                                                }
+                                                self?.lastTimeControllNumber = player.timeControlStatus.rawValue
         })
     }
     
@@ -420,47 +462,30 @@ extension ItemPlayer {
     }
     
     fileprivate func actionWhenBufferingRateReason() {
+        // 强制播放的时候不直接改变播放状态
         if #available(iOS 10.0, *) {
             player.playImmediately(atRate: rate)
         } else {
             player.play()
         }
-        // 可以开始播放的状态 如果开启强制播放 就强制播放 如果没有开启强制播放 就保持暂停
-        if oldStatus == .playing || needForcePlay {
-            if rate != 1.0 {
-                player.rate = rate
-            }
-            playStatus = .playing
-        } else {
-            if ((player.rate == 0) || (player.error != nil)) {
-                player.pause()
-                playStatus = .paused
-                Player_Print("status change: change after preparing pause")
-            }
-        }
-        oldStatus = .closed
-        Player_Print("status change: change after preparing get old \(oldStatus)")
     }
     
     fileprivate func setGravity() {
-        guard let item = playerItem else {
+        guard let item = player.currentItem else {
             return
         }
         let size = item.presentationSize
         guard !size.equalTo(CGSize.zero) else {
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2) {
+                self.setGravity()
+            }
             return
         }
-        var targetGravity: AVLayerVideoGravity = .resizeAspect
-        if size.width > 0 && size.height > 0, 3*size.height/size.width > 4 {
-            targetGravity = .resizeAspectFill
-        }
-        if playerLayer.videoGravity != targetGravity {
-            playerLayer.videoGravity = targetGravity
-        }
+        setGravityWith(size)
     }
     
     fileprivate func outputSteamingProgress() -> Double {
-        guard let playerItem = playerItem else {
+        guard let playerItem = player.currentItem else {
             return 0
         }
         let steaming = playerItem.loadedTimeRanges
@@ -491,20 +516,21 @@ extension ItemPlayer {
 
 // MARK: - 播放器帮助方法
 extension ItemPlayer {
-    fileprivate func stopPlayer() {
-        player.pause()
-    }
     
-    fileprivate func readyPlayerItem() {
-        bufferObserver = nil
+    fileprivate func resetPlayerItemInfo() {
+        playBackStatusObserver = nil
         steamProgressObserver = nil
-        
+        timeControllObserver = nil
+        lastTimeControllNumber = -1
+        playOnNilKeepUpReason = true
         NotificationCenter.default.removeObserver(self,
                                                   name: NSNotification.Name.AVPlayerItemDidPlayToEndTime,
                                                   object: player.currentItem)
-        
+    }
+    
+    fileprivate func readyPlayerItem() {
+        resetPlayerItemInfo()
         let asset = itemAsset
-        
         asset.loadValuesAsynchronously(forKeys: ["duration" , "tracks"]) { [weak self] in
             guard let strongSelf = self else { return }
             let playerItem = AVPlayerItem.init(asset: asset)
@@ -512,19 +538,36 @@ extension ItemPlayer {
         }
     }
     
-    fileprivate func replaceItemAndStartPlay(_ item: AVPlayerItem) {
-        playerItem = item
-        guard let playerItem = playerItem else { return }
-        
+    fileprivate func recreatePlayer(_ item: AVPlayerItem) {
         if #available(iOS 10.0, *) {
-            playerItem.preferredForwardBufferDuration = bufferDuration
+            item.preferredForwardBufferDuration = bufferDuration
         }
+        if let observer = timeObserver {
+            player.removeTimeObserver(observer)
+            timeObserver = nil
+        }
+        player.replaceCurrentItem(with: nil)
         atEnd = false
-        player.replaceCurrentItem(with: playerItem)
+        player = AVPlayer(playerItem: item)
+        playerLayer = AVPlayerLayer(player: player)
+        playerLayer.frame = playArea
+        playerLayer.removeAllAnimations()
+        initOnPlayer()
         // 输出总时间
-        let totalTime = playerItem.duration.seconds
+        let totalTime = item.duration.seconds
         self.itemPlayerDelegate?.itemTotalDuration(totalTime)
-        
+    }
+    
+    fileprivate func replaceItemAndStartPlay(_ item: AVPlayerItem) {
+        if #available(iOS 10.0, *) {
+            item.preferredForwardBufferDuration = bufferDuration
+        }
+        player.replaceCurrentItem(with: nil)
+        atEnd = false
+        player.replaceCurrentItem(with: item)
+        // 输出总时间
+        let totalTime = item.duration.seconds
+        self.itemPlayerDelegate?.itemTotalDuration(totalTime)
         addVideoEventHandle()
     }
 }
@@ -532,6 +575,6 @@ extension ItemPlayer {
 func Player_Print<T>(_ message: T,file: String = #file, method: StaticString = #function, line: UInt = #line) {
     #if DEBUG
     guard ItemPlayer.needLog else { return }
-    print("Player Output : \n[\(line)], \(method): \(message) \n // --> at thread: \(Thread.current) \n  --> at time: \(Date()) \n")
+    print("Player Output : [\(line)], \(method): \(message) \n // --> at thread: \(Thread.current) \n  --> at time: \(Date()) \n")
     #endif
 }

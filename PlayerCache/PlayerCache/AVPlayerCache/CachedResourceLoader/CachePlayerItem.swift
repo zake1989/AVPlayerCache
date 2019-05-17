@@ -11,7 +11,7 @@ import AVFoundation
 
 class CachePlayerItem {
     
-    var errorHandle: (()->Void)?
+    weak var delegate: CachedItemHandleDelegate?
     
     deinit {
         Cache_Print("deinit cache player item", level: LogLevel.dealloc)
@@ -69,8 +69,10 @@ class CachePlayerItem {
 
 extension CachePlayerItem: CachedItemHandleDelegate {
     func needRecoverFromError() {
-        if let error = errorHandle {
-            error()
-        }
+        delegate?.needRecoverFromError()
+    }
+    
+    func noMoreRequestCheck() {
+        delegate?.noMoreRequestCheck()
     }
 }

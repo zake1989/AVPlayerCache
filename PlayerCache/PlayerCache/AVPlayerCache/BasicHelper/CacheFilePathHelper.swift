@@ -18,7 +18,7 @@ class CacheFilePathHelper: NSObject {
     
     private class func cachesDataStoreWithRootFolder(_ folderName: String) -> String {
         let paths = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)
-        return paths[0].appendingPathComponent(folderName)
+        return paths[0].appendingPathComponentOnFile(folderName)
     }
     
     public static var playerCacheStore: String = {
@@ -30,18 +30,21 @@ class CacheFilePathHelper: NSObject {
     }()
     
     open class func videoPath(from url: String) -> String {
-        return urlDirectory(url).appendingPathComponent("video.mp4")
+        return urlDirectory(url).appendingPathComponentOnFile("video.mp4")
     }
     
     open class func videoMetaDataFile(from url: String) -> String {
-        return urlDirectory(url).appendingPathComponent("metadata.dmc")
+        return urlDirectory(url).appendingPathComponentOnFile("metadata.dmc")
     }
     
     open class func urlDirectory(_ url: String) -> String {
-        let dirName: String = url.md5()
-        let endDir = playerCacheStore.appendingPathComponent(dirName)
+        let dirName: String = url.vmd5()
+        let endDir = playerCacheStore.appendingPathComponentOnFile(dirName)
         if !directoryExistAtPath(endDir) {
             _ = createDirectoryAtPath(endDir)
+            DispatchQueue.global().async {
+                clearHalfCache()
+            }
         }
         return endDir
     }
@@ -54,6 +57,11 @@ class CacheFilePathHelper: NSObject {
         var isDir : ObjCBool = false
         let fileExist: Bool = FileManager.default.fileExists(atPath: path, isDirectory:&isDir)
         return isDir.boolValue && fileExist
+    }
+    
+    open class func removeVideoFile(_ url: String) -> Bool {
+        let path = urlDirectory(url)
+        return removeFileAtDirectory(path)
     }
     
     open class func removeFileAtPath(_ path: String) -> Bool {
@@ -96,6 +104,25 @@ class CacheFilePathHelper: NSObject {
         return true
     }
     
+    open class func readDirectoriesAtPath(_ directory: String) -> [String] {
+        guard directoryExistAtPath(directory) else {
+            return []
+        }
+        do {
+            var files: [String] = []
+            for path in try FileManager.default.contentsOfDirectory(atPath: directory) {
+                let p = "\(directory)" + "/" + "\(path)"
+                if directoryExistAtPath(p) {
+                    files.append(p)
+                }
+            }
+            return files
+        } catch let error as NSError {
+            Cache_Print("Error: \(error)", level: LogLevel.error)
+            return []
+        }
+    }
+    
     open class func fileSizeAtPath(_ path: String) -> Int64 {
         var fileSize : Int64 = 0
         do {
@@ -109,14 +136,45 @@ class CacheFilePathHelper: NSObject {
         }
         return fileSize
     }
+    
+    open class func createdDateForFile(_ path: String) -> Date {
+        var date: Date = Date()
+        do {
+            let attr = try FileManager.default.attributesOfItem(atPath: path)
+            if let d = attr[FileAttributeKey.creationDate] as? Date {
+                date = d
+            }
+        } catch {
+            Cache_Print("Error: \(error)", level: LogLevel.error)
+        }
+        return date
+    }
+    
+    open class func clearHalfCache() {
+        let paths = readDirectoriesAtPath(playerCacheStore)
+        guard paths.count > BasicFileData.maxCacheSize else {
+            return
+        }
+        let sortedPath = paths.sorted { (lPath, rPath) -> Bool in
+            return createdDateForFile(lPath) < createdDateForFile(rPath)
+        }
+        
+        for item in sortedPath.enumerated() {
+            if item.offset > max(paths.count-10, 10) {
+                return
+            } else {
+                _ = removeFileAtPath(item.element)
+            }
+        }
+    }
 }
 
 extension String {
-    func appendingPathComponent(_ string: String) -> String {
+    func appendingPathComponentOnFile(_ string: String) -> String {
         return URL(fileURLWithPath: self).appendingPathComponent(string).path
     }
     
-    func md5() -> String {
+    func vmd5() -> String {
         let str = self.cString(using: String.Encoding.utf8)
         let strLen = CUnsignedInt(self.lengthOfBytes(using: String.Encoding.utf8))
         let digestLen = Int(CC_MD5_DIGEST_LENGTH)

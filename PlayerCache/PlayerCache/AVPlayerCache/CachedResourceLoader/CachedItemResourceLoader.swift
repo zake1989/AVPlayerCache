@@ -11,6 +11,7 @@ import AVFoundation
 
 protocol CachedItemHandleDelegate: class {
     func needRecoverFromError()
+    func noMoreRequestCheck()
 }
 
 class CachedItemResourceLoader: NSObject {
@@ -29,6 +30,8 @@ class CachedItemResourceLoader: NSObject {
     var cacheFileHandler: CacheFileHandler?
     
     var onSeeking: Bool = false
+    
+    fileprivate var task: DispatchWorkItem?
     
     override init() {
         super.init()
@@ -49,7 +52,16 @@ class CachedItemResourceLoader: NSObject {
             processCurrentRequest(loadingRequest: request)
         } else {
             Cache_Print("loader process no more pending request", level: LogLevel.resource)
+            checkNoMorePandingRequestStatus()
         }
+    }
+    
+    fileprivate func checkNoMorePandingRequestStatus() {
+        task?.cancel()
+        task = DispatchWorkItem { [weak self] in
+            self?.delegate?.noMoreRequestCheck()
+        }
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.4, execute: task!)
     }
     
     fileprivate func processCurrentRequest(loadingRequest: AVAssetResourceLoadingRequest) {
@@ -146,6 +158,7 @@ extension CachedItemResourceLoader: AVAssetResourceLoaderDelegate {
         } else {
             loadingRequestList.append(loadingRequest)
         }
+        task?.cancel()
         Cache_Print("loader pending request : \(loadingRequestList.count+seekingRequestList.count)", level: LogLevel.resource)
         return true
     }

@@ -12,6 +12,7 @@ import AVFoundation
 protocol CachedItemHandleDelegate: class {
     func needRecoverFromError()
     func noMoreRequestCheck()
+    func canTryForcePlay()
 }
 
 class CachedItemResourceLoader: NSObject {
@@ -32,6 +33,8 @@ class CachedItemResourceLoader: NSObject {
     var onSeeking: Bool = false
     
     fileprivate var task: DispatchWorkItem?
+    
+    fileprivate var dataReceiveCountOnPreparing: Int = 0
     
     override init() {
         super.init()
@@ -117,6 +120,11 @@ extension CachedItemResourceLoader: FileDataDelegate {
             Cache_Print("loader fetched Data: \(data.count)", level: LogLevel.resource)
             if self.currentLoadingRequest?.contentInformationRequest == nil {
                 self.currentLoadingRequest?.dataRequest?.respond(with: data)
+                self.dataReceiveCountOnPreparing += 1
+                if self.dataReceiveCountOnPreparing >= BasicFileData.tryForcePlayBufferCount {
+                    self.dataReceiveCountOnPreparing = 0
+                    self.delegate?.canTryForcePlay()
+                }
             }
         }
     }

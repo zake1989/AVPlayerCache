@@ -102,7 +102,7 @@ class ItemPlayer {
     
     fileprivate var timeObserver: Any?
     
-    fileprivate var bufferDuration: TimeInterval = 0.01
+    fileprivate var bufferDuration: TimeInterval = 1
     
     fileprivate var playBackStatusObserver: NSKeyValueObservation?
     
@@ -391,7 +391,7 @@ extension ItemPlayer {
                                                                     strongSelf.playOnNilKeepUpReason = false
                                                                     strongSelf.actionWhenBufferingRateReason()
                                                                 } else if strongSelf.player.reasonForWaitingToPlay == AVPlayer.WaitingReason.toMinimizeStalls {
-                                                                    //                                                            strongSelf.actionWhenBufferingRateReason()
+                                                                    strongSelf.actionWhenBufferingRateReason()
                                                                 }
                                                             }
                                                             strongSelf.actionWhenPerparing()
@@ -461,7 +461,7 @@ extension ItemPlayer {
         playStatus = .preparing
     }
     
-    fileprivate func actionWhenBufferingRateReason() {
+    func actionWhenBufferingRateReason() {
         // 强制播放的时候不直接改变播放状态
         if #available(iOS 10.0, *) {
             player.playImmediately(atRate: rate)

@@ -58,7 +58,7 @@ class CachePlayerItem {
         asset.resourceLoader.setDelegate(loader, queue: DispatchQueue.main)
         let item = AVPlayerItem(asset: asset)
         item.canUseNetworkResourcesForLiveStreamingWhilePaused = true
-        item.preferredPeakBitRate = 1000*100
+        item.preferredPeakBitRate = 1500
         if #available(iOS 10.0, *) {
             item.preferredForwardBufferDuration = 1
         }
@@ -74,5 +74,9 @@ extension CachePlayerItem: CachedItemHandleDelegate {
     
     func noMoreRequestCheck() {
         delegate?.noMoreRequestCheck()
+    }
+    
+    func canTryForcePlay() {
+        delegate?.canTryForcePlay()
     }
 }

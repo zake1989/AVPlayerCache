@@ -144,7 +144,11 @@ class CacheFileHandler {
         
         defer {
             if !savedCacheData.fileInfo.isEmptyInfo() {
-                delegate?.fileHandlerGetResponse(fileInfo: savedCacheData.fileInfo, response: nil)
+                fileOperationQueue.addOperation { [weak self] in
+                    guard let strongSelf = self else { return }
+                    print("file handler: start")
+                    strongSelf.delegate?.fileHandlerGetResponse(fileInfo: strongSelf.savedCacheData.fileInfo, response: nil)
+                }
             }
             processChunk()
         }
@@ -162,12 +166,16 @@ class CacheFileHandler {
     }
     
     func forceStopCurrentProcess() {
-        currentChunkList = []
-        downloader.stopDownload()
-        saveCachedData()
-        FileDownlaodingManager.shared.endDownloading(itemURL.baseURLString)
-        let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled, userInfo: nil) as Error
-        delegate?.fileHandlerDidFinishFetchData(error: error)
+        fileOperationQueue.addOperation { [weak self] in
+            guard let strongSelf = self else { return }
+            strongSelf.currentChunkList = []
+            strongSelf.downloader.stopDownload()
+            strongSelf.saveCachedData()
+            FileDownlaodingManager.shared.endDownloading(strongSelf.itemURL.baseURLString)
+            let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled, userInfo: nil) as Error
+            print("file handler: finish")
+            strongSelf.delegate?.fileHandlerDidFinishFetchData(error: error)
+        }
     }
     
     func stopAndFetch(at range: DataRange) {
@@ -183,6 +191,7 @@ class CacheFileHandler {
                 strongSelf.saveCachedData()
                 FileDownlaodingManager.shared.endDownloading(strongSelf.itemURL.baseURLString)
                 Cache_Print("delegate can call \(String(describing: strongSelf.delegate))", level: LogLevel.file)
+                print("file handler: finish on request finish")
                 strongSelf.delegate?.fileHandlerDidFinishFetchData(error: error)
             }
             return
@@ -270,7 +279,11 @@ extension CacheFileHandler: SessionOutputDelegate {
         let needResponse = savedCacheData.fileInfo.isEmptyInfo()
         readCacheFileInfo(from: response)
         if needResponse {
-            delegate?.fileHandlerGetResponse(fileInfo: savedCacheData.fileInfo, response: response)
+            fileOperationQueue.addOperation { [weak self] in
+                guard let strongSelf = self else { return }
+                print("file handler: start on request")
+                strongSelf.delegate?.fileHandlerGetResponse(fileInfo: strongSelf.savedCacheData.fileInfo, response: response)
+            }
         }
     }
     

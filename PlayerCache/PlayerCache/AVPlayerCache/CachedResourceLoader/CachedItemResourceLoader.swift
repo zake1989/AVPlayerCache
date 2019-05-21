@@ -330,7 +330,6 @@ extension CachedItemResourceLoader: AVAssetResourceLoaderDelegate {
         seekingRequestList = seekingRequestList.filter { (request) -> Bool in
             return !(request.isFinished || request.isCancelled)
         }
-        print("left count: \(loadingRequestList.count)")
     }
 }
 

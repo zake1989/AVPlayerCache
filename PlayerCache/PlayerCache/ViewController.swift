@@ -25,7 +25,7 @@ import AVFoundation
 
 class ViewController: UIViewController {
     
-    let urlString: String = "https://mvvideo5.meitudata.com/56ea0e90d6cb2653.mp4"
+    let urlString: String = "https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f340000bimvsiqj2boqo16ghjm0"
 
     lazy var cacheFileHandler: CacheFileHandler = CacheFileHandler(videoUrl: urlString)
     
@@ -170,6 +170,7 @@ extension ViewController {
     
     @objc func clearAll() {
         itemPlayer?.pause()
+        itemPlayer?.stopPlayer()
         //        (item?.asset as? AVURLAsset)?.resourceLoader.setDelegate(nil, queue: nil)
         itemPlayer = nil
         item = nil

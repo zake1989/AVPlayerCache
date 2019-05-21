@@ -121,9 +121,7 @@ class CachedItemResourceLoader: NSObject {
 
 extension CachedItemResourceLoader: FileDataDelegate {
     func fileHandlerGetResponse(fileInfo info: CacheFileInfo, response: URLResponse?) {
-        print("get response")
         DispatchQueue.main.async {
-            print(info)
             guard let infoRequest = self.fetchInfoRequest(),
                 infoRequest.contentInformationRequest != nil else {
                 return
@@ -151,7 +149,6 @@ extension CachedItemResourceLoader: FileDataDelegate {
     }
     
     func fileHandler(didFetch data: Data, at range: DataRange) {
-        print(range)
         DispatchQueue.main.async {
             if self.onSingleRequestModel {
                 self.handleFetchedData(data, at: range)
@@ -170,14 +167,12 @@ extension CachedItemResourceLoader: FileDataDelegate {
     }
     
     func fileHandlerDidFinishFetchData(error: Error?) {
-        print("finish request")
         DispatchQueue.main.async {
             if let e = error, (e as NSError).code != NSURLErrorCancelled {
                 Cache_Print("loader finish fetch data with error", level: LogLevel.resource)
                 self.currentLoadingRequest?.finishLoading(with: e)
                 self.delegate?.needRecoverFromError()
             } else {
-                 print("finish")
                 if self.onSingleRequestModel {
                     self.handleRequestAfterFullyDownloaded()
                 } else {
@@ -215,7 +210,6 @@ extension CachedItemResourceLoader: FileDataDelegate {
         }
         let startLowerBound: Int64 = startDataRange.lowerBound
         var rangeTaken: DataRange = DataRange(uncheckedBounds: (lower: 0, upper: 0))
-        print("start range: \(startDataRange)")
         
         let rangeRequestList = filterCurrentRequest(startDataRange)
         
@@ -223,7 +217,6 @@ extension CachedItemResourceLoader: FileDataDelegate {
             if let dataRequest = request.dataRequest {
                 let dataRange = DataRange(uncheckedBounds: (Int64(dataRequest.requestedOffset), upper: Int64(dataRequest.requestedOffset)+Int64(dataRequest.requestedLength)))
                 if let neededRange = dataRange.rangeClamped(startDataRange) {
-                    print("needed range: \(neededRange) -- \(dataRange)")
                     dataRequest.respond(with: startData.subdata(in: neededRange.rangeStartFrom(Int(startLowerBound))))
                     if neededRange.upperBound == dataRange.upperBound {
                         request.finishLoading()
@@ -233,9 +226,6 @@ extension CachedItemResourceLoader: FileDataDelegate {
                         rangeTaken = neededRange
                     } else {
                         rangeTaken = rangeTaken.rangeAdd(neededRange)
-                    }
-                    if !startDataRange.isEmpty {
-                        print("range left: \(startDataRange)")
                     }
                 }
             }
@@ -307,20 +297,16 @@ extension CachedItemResourceLoader: AVAssetResourceLoaderDelegate {
         }
 
         task?.cancel()
-        print("__________________________________")
-        print(loadingRequestList.count)
-        if let dataRequest = loadingRequest.dataRequest {
-            print("\(dataRequest.requestedOffset) ==== \(Int64(dataRequest.requestedLength)+dataRequest.requestedOffset)")
-        }
-        print("__________________________________")
         Cache_Print("loader pending request : \(loadingRequestList.count+seekingRequestList.count)", level: LogLevel.resource)
         return true
     }
     
     func resourceLoader(_ resourceLoader: AVAssetResourceLoader, didCancel loadingRequest: AVAssetResourceLoadingRequest) {
         Cache_Print("loader cancel need", level: LogLevel.resource)
-        cacheFileHandler?.forceStopCurrentProcess()
-        onSeeking = true
+        if !onSingleRequestModel {
+            cacheFileHandler?.forceStopCurrentProcess()
+            onSeeking = true
+        }
     }
     
     func removeRequest() {

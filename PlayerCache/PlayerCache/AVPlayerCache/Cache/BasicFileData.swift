@@ -50,3 +50,43 @@ class ItemURL {
 
 typealias DataRange = Range<Int64>
 
+extension Range where Bound == Int64 {
+    
+    func rangeClamped(_ range: Range) -> Range? {
+        if self.overlaps(range) {
+            return self.clamped(to: range)
+        }
+        return nil
+    }
+    
+    func rangeDecrease(_ range: Range) -> Range {
+        guard let commonRange = self.rangeClamped(range) else {
+            return self
+        }
+        if commonRange.upperBound == self.upperBound {
+            return Range(uncheckedBounds: (lower: self.lowerBound, upper: commonRange.lowerBound))
+        } else if commonRange.lowerBound == self.lowerBound {
+            return Range(uncheckedBounds: (lower: commonRange.upperBound, upper: self.upperBound))
+        }
+        return self
+    }
+    
+    func rangeAdd(_ range: Range) -> Range {
+        guard self.overlaps(range) || upperBound == range.lowerBound || lowerBound == range.upperBound else {
+            return self
+        }
+        let lower = Swift.min(range.lowerBound, self.lowerBound)
+        let upper = Swift.max(range.upperBound, self.upperBound)
+        return Range(uncheckedBounds: (lower: lower, upper: upper))
+    }
+    
+    var dataRange: Range<Int> {
+        return Range<Int>(uncheckedBounds: (lower: Int(lowerBound), upper: Int(upperBound)))
+    }
+    
+    func rangeStartFrom(_ startLowerBound: Int) -> Range<Int> {
+        return Range<Int>(uncheckedBounds: (lower: Int(lowerBound)-startLowerBound,
+                                            upper: Int(upperBound)-startLowerBound))
+    }
+    
+}

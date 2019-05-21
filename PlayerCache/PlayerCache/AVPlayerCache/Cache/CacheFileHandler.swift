@@ -27,6 +27,23 @@ class CacheFileHandler {
     
     weak var delegate: FileDataDelegate?
     
+    var fullyDownloaded: Bool {
+        if let firstRange = savedCacheData.chunkList.first {
+            let range = firstRange.range.upperBound - firstRange.range.lowerBound
+            return range == Int(savedCacheData.fileInfo.contentLength)
+        }
+        return false
+    }
+    
+    var savedCacheData: SavedCacheData = {
+        let info = CacheFileInfo(contentType: "",
+                                 byteRangeAccessSupported: false,
+                                 contentLength: 0,
+                                 downloadedContentLength: 0,
+                                 downloadedTotalTime: 0)
+        return SavedCacheData(chunkList: [], fileInfo: info, downloadSpeed: 0)
+    }()
+    
     fileprivate let fileOperationQueue: OperationQueue = {
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = 1
@@ -63,15 +80,6 @@ class CacheFileHandler {
     
     fileprivate var onPredownload: Bool = false
     
-    fileprivate var savedCacheData: SavedCacheData = {
-        let info = CacheFileInfo(contentType: "",
-                                 byteRangeAccessSupported: false,
-                                 contentLength: 0,
-                                 downloadedContentLength: 0,
-                                 downloadedTotalTime: 0)
-        return SavedCacheData(chunkList: [], fileInfo: info, downloadSpeed: 0)
-    }()
-    
     init(videoUrl: String) {
         itemURL.baseURLString = videoUrl
         videoPath = CacheFilePathHelper.videoPath(from: videoUrl)
@@ -104,6 +112,21 @@ class CacheFileHandler {
             }
             FileDownlaodingManager.shared.startDownloading(itemURL.baseURLString)
             onPredownload = true
+            startOffSet = 0
+            downloadFileWithRange(DataRange(uncheckedBounds: (0, 0)))
+        }
+    }
+    
+    func startLoadFullData() {
+        let fileLength = savedCacheData.fileInfo.contentLength
+        if fileLength != 0 {
+            startOffSet = 0
+            fetchData(at: DataRange(uncheckedBounds: (0, fileLength)))
+        } else {
+            guard !FileDownlaodingManager.shared.isDownloading(itemURL.baseURLString) else {
+                return
+            }
+            FileDownlaodingManager.shared.startDownloading(itemURL.baseURLString)
             startOffSet = 0
             downloadFileWithRange(DataRange(uncheckedBounds: (0, 0)))
         }
@@ -180,6 +203,14 @@ class CacheFileHandler {
         }
         setStartTime()
         downloader.startDownload(from: url, at: range)
+    }
+    
+    func readData(_ range: DataRange) -> Data? {
+        guard let reader = fileReader else {
+            return nil
+        }
+        reader.seek(toFileOffset: UInt64(range.lowerBound))
+        return reader.readData(ofLength: Int(range.upperBound-range.lowerBound))
     }
     
     fileprivate func readFileWithRange(_ range: DataRange) {

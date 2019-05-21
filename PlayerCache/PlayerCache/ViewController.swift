@@ -14,6 +14,7 @@ import AVFoundation
 //- 2 : "https://cdn.palm-chat.com/V/2f53898f6d6e4e6785e18e7597bf9365_z.mp4"
 //- 3 : "https://cdn.palm-chat.com/V/0be3e1cb1e02415e9443e8be34461845_z.mp4"
 //- 4 : "https://cdn.palm-chat.com/V/45e0c55e55774685af55430047e0ed47_z.mp4"
+//"https://cdn.palm-chat.com/V/da805946-94ec-4614-8e65-d2f25709ec83_z.mp4"
 //"https://mvvideo5.meitudata.com/56ea0e90d6cb2653.mp4"
 //"https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f340000bimvsiqj2boqo16ghjm0"
 //"https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0300fc20000bik28jcif32phdckjgog"
@@ -24,7 +25,7 @@ import AVFoundation
 
 class ViewController: UIViewController {
     
-    let urlString: String = "https://cdn.palm-chat.com/V/da805946-94ec-4614-8e65-d2f25709ec83_z.mp4"
+    let urlString: String = "https://mvvideo5.meitudata.com/56ea0e90d6cb2653.mp4"
 
     lazy var cacheFileHandler: CacheFileHandler = CacheFileHandler(videoUrl: urlString)
     
@@ -46,7 +47,7 @@ class ViewController: UIViewController {
     lazy var item: AVPlayerItem? = cachePlayerItem?.createPlayerItem(urlString)
 //         cachePlayerItem.createPureOnlineItem(urlString)  cachePlayerItem.createPlayerItem(urlString)
     
-    let loader = CachedItemResourceLoader()
+    let loader = CachedItemResourceLoader(false)
     
     let slider = UISlider(frame: CGRect.zero)
 
@@ -100,7 +101,7 @@ extension ViewController: FileDataDelegate {
     func testCache() {
         let range: DataRange = DataRange(uncheckedBounds: (0, 2))
         cacheFileHandler.delegate = self
-        cacheFileHandler.fetchData(at: range)
+//        cacheFileHandler.fetchData(at: range)
 //        cacheFileHandler.perDownloadData()
         
         let button = UIButton(frame: CGRect(x: 100, y: 100, width: 50, height: 50))
@@ -120,7 +121,7 @@ extension ViewController: FileDataDelegate {
     
     @objc func start() {
         let range: DataRange = DataRange(uncheckedBounds: (0, 2000*1000))
-        cacheFileHandler.fetchData(at: range)
+//        cacheFileHandler.fetchData(at: range)
     }
 }
 

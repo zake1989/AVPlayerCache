@@ -17,18 +17,18 @@ class CachePlayerItem {
         Cache_Print("deinit cache player item", level: LogLevel.dealloc)
     }
     
-    private lazy var loader = CachedItemResourceLoader()
+    private lazy var loader = CachedItemResourceLoader(true)
     
     init() {
         
     }
     
     func createPlayerItem(_ urlString: String) -> AVPlayerItem? {
-        if CacheFileHandler.isFullyDownload(videoUrl: urlString) {
-            return createLocalItem(urlString)
-        } else {
+//        if CacheFileHandler.isFullyDownload(videoUrl: urlString) {
+//            return createLocalItem(urlString)
+//        } else {
             return createOnlineItem(urlString)
-        }
+//        }
     }
     
     func createPureOnlineItem(_ urlString: String) -> AVPlayerItem? {
@@ -52,7 +52,7 @@ class CachePlayerItem {
         guard let url = URL(string: localURL) else {
             return nil
         }
-        loader = CachedItemResourceLoader()
+        loader = CachedItemResourceLoader(false)
         loader.delegate = self
         let asset = AVURLAsset(url: url)
         asset.resourceLoader.setDelegate(loader, queue: DispatchQueue.main)

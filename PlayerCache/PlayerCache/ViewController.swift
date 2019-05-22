@@ -26,11 +26,12 @@ import AVFoundation
 //http://a.vskitcdn.com/V/e9dcaf99-a869-4761-a198-5a1c63e8dce2_z.mp4
 //http://a.vskitcdn.com/V/ed88830c-9530-4c53-b851-73edf1d0f499_z.mp4
 //http://a.vskitcdn.com/V/8f39f332-1589-44da-871f-676894d55755_z.mp4
+//http://a.vskitcdn.com/V/jiale_3s.mp4
 
 
 class ViewController: UIViewController {
     
-    let urlString: String = "https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f340000bimvsiqj2boqo16ghjm0"
+    let urlString: String = "http://a.vskitcdn.com/V/jiale_3s.mp4"
 
     lazy var cacheFileHandler: CacheFileHandler = CacheFileHandler(videoUrl: urlString)
     

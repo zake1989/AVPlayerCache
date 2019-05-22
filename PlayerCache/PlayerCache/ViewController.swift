@@ -21,6 +21,11 @@ import AVFoundation
 //"https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200fc50000bierlad1mik4qf9714sg"
 //"https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f7e0000biirpudqg5b5btlhr6n0"
 //"https://aweme.snssdk.com/aweme/v1/playwm/?video_id=v0200f880000bii87pveqk816g9s7ql0"
+//http://a.vskitcdn.com/V/fb853a5b-b565-49a8-b2d5-5f3077898bd2_z.mp4
+//http://a.vskitcdn.com/V/820d926c-2290-47fb-a4c5-a41f4b3f0284_z.mp4
+//http://a.vskitcdn.com/V/e9dcaf99-a869-4761-a198-5a1c63e8dce2_z.mp4
+//http://a.vskitcdn.com/V/ed88830c-9530-4c53-b851-73edf1d0f499_z.mp4
+//http://a.vskitcdn.com/V/8f39f332-1589-44da-871f-676894d55755_z.mp4
 
 
 class ViewController: UIViewController {

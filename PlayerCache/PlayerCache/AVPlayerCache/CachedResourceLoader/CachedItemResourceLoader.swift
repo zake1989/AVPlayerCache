@@ -124,7 +124,7 @@ extension CachedItemResourceLoader: FileDataDelegate {
         DispatchQueue.main.async {
             guard let infoRequest = self.fetchInfoRequest(),
                 infoRequest.contentInformationRequest != nil else {
-                return
+                    return
             }
             Cache_Print("loader loading request response : \(info)", level: LogLevel.resource)
             infoRequest.contentInformationRequest?.contentType = info.contentType
@@ -151,7 +151,18 @@ extension CachedItemResourceLoader: FileDataDelegate {
     func fileHandler(didFetch data: Data, at range: DataRange) {
         DispatchQueue.main.async {
             if self.onSingleRequestModel {
-                self.handleFetchedData(data, at: range)
+                var startDataRange = range
+                var startData = data
+                if !self.bufferDataRange.isEmpty {
+                    startDataRange = self.bufferDataRange.rangeAdd(range)
+                    if startDataRange != self.bufferDataRange {
+                        startData = self.bufferData
+                        startData.append(data)
+                    } else {
+                        startDataRange = range
+                    }
+                }
+                self.handleFetchedData(startData, at: startDataRange)
             } else {
                 Cache_Print("loader fetched Data: \(data.count)", level: LogLevel.resource)
                 if self.currentLoadingRequest?.contentInformationRequest == nil {
@@ -192,9 +203,7 @@ extension CachedItemResourceLoader: FileDataDelegate {
                 if let dataRequest = request.dataRequest {
                     let dataRange = DataRange(uncheckedBounds: (Int64(dataRequest.requestedOffset),
                                                                 upper: Int64(dataRequest.requestedOffset)+Int64(dataRequest.requestedLength)))
-                    if dataRange.contains(startDataRange.lowerBound) {
-                        return true
-                    }
+                    return dataRange.overlaps(startDataRange)
                 }
                 return false
         }
@@ -202,25 +211,23 @@ extension CachedItemResourceLoader: FileDataDelegate {
     
     fileprivate func handleFetchedData(_ data: Data, at range: DataRange) {
         var startDataRange = range
-        var startData = data
-        if !bufferDataRange.isEmpty {
-            startDataRange = bufferDataRange.rangeAdd(range)
-            startData = bufferData
-            startData.append(data)
-        }
         let startLowerBound: Int64 = startDataRange.lowerBound
         var rangeTaken: DataRange = DataRange(uncheckedBounds: (lower: 0, upper: 0))
         
         let rangeRequestList = filterCurrentRequest(startDataRange)
-        
+        print("\n fetch Range start: \(startDataRange)")
         for request in rangeRequestList {
             if let dataRequest = request.dataRequest {
                 let dataRange = DataRange(uncheckedBounds: (Int64(dataRequest.requestedOffset), upper: Int64(dataRequest.requestedOffset)+Int64(dataRequest.requestedLength)))
+                print("  fetch range _______________________________")
+                print("  fetch range data range: \(dataRange)")
+                print("  fetch range _______________________________")
                 if let neededRange = dataRange.rangeClamped(startDataRange) {
-                    dataRequest.respond(with: startData.subdata(in: neededRange.rangeStartFrom(Int(startLowerBound))))
+                    dataRequest.respond(with: data.subdata(in: neededRange.rangeStartFrom(Int(startLowerBound))))
                     if neededRange.upperBound == dataRange.upperBound {
                         request.finishLoading()
                     }
+                    print("  fetch range needed data range: \(neededRange)")
                     removeRequest()
                     if rangeTaken.isEmpty {
                         rangeTaken = neededRange
@@ -230,9 +237,12 @@ extension CachedItemResourceLoader: FileDataDelegate {
                 }
             }
         }
+        print(" fetch Range before left: \(startDataRange)")
         startDataRange = startDataRange.rangeDecrease(rangeTaken)
+        print(" fetch Range taken range \(rangeTaken)")
+        print(" fetch Range after left: \(startDataRange) \n")
         if !startDataRange.isEmpty {
-            bufferData = startData.subdata(in: startDataRange.rangeStartFrom(Int(startLowerBound)))
+            bufferData = data.subdata(in: startDataRange.rangeStartFrom(Int(startLowerBound)))
             bufferDataRange = startDataRange
         } else {
             bufferData = Data()
@@ -274,12 +284,21 @@ extension CachedItemResourceLoader: AVAssetResourceLoaderDelegate {
         if onSingleRequestModel {
             createFileHandler(loadingRequest)
             loadingRequestList.append(loadingRequest)
+            if let dataR = loadingRequest.dataRequest {
+                print("  fetch range ===============================")
+                print("  fetch range loading start range: \(dataR.requestedOffset) -- \(dataR.requestedOffset+Int64(dataR.requestedLength))")
+                print("  fetch range ===============================")
+            }
             guard let fileHandler = cacheFileHandler else {
                 return false
             }
             if !fileHandler.fullyDownloaded {
                 if loadingRequest.contentInformationRequest != nil {
                     cacheFileHandler?.startLoadFullData()
+                } else {
+                    if !bufferDataRange.isEmpty {
+                        handleFetchedData(bufferData, at: bufferDataRange)
+                    }
                 }
             } else {
                 handleRequestAfterFullyDownloaded()
@@ -295,7 +314,7 @@ extension CachedItemResourceLoader: AVAssetResourceLoaderDelegate {
                 loadingRequestList.append(loadingRequest)
             }
         }
-
+        
         task?.cancel()
         Cache_Print("loader pending request : \(loadingRequestList.count+seekingRequestList.count)", level: LogLevel.resource)
         return true

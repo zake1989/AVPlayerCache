@@ -433,6 +433,7 @@ extension ItemPlayer {
             }
             playStatus = .playing
         } else {
+            player.pause()
             playStatus = .paused
         }
     }
@@ -446,10 +447,9 @@ extension ItemPlayer {
             }
             playStatus = .playing
         } else {
-            if ((player.rate == 0) || (player.error != nil)) {
-                playStatus = .paused
-                Player_Print("status change: change after preparing pause")
-            }
+            player.pause()
+            playStatus = .paused
+            Player_Print("status change: change after preparing pause")
         }
         oldStatus = .closed
         Player_Print("status change: change after preparing get old \(oldStatus)")
@@ -578,3 +578,4 @@ func Player_Print<T>(_ message: T,file: String = #file, method: StaticString = #
     print("Player Output : [\(line)], \(method): \(message) \n // --> at thread: \(Thread.current) \n  --> at time: \(Date()) \n")
     #endif
 }
+

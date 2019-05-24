@@ -462,6 +462,9 @@ extension ItemPlayer {
     }
     
     func actionWhenBufferingRateReason() {
+        guard needForcePlay else {
+            return
+        }
         // 强制播放的时候不直接改变播放状态
         if #available(iOS 10.0, *) {
             player.playImmediately(atRate: rate)

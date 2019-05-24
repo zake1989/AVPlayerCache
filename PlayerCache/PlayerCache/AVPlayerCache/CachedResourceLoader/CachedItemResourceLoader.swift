@@ -151,18 +151,14 @@ extension CachedItemResourceLoader: FileDataDelegate {
     func fileHandler(didFetch data: Data, at range: DataRange) {
         DispatchQueue.main.async {
             if self.onSingleRequestModel {
-                var startDataRange = range
-                var startData = data
-                if !self.bufferDataRange.isEmpty {
-                    startDataRange = self.bufferDataRange.rangeAdd(range)
-                    if startDataRange != self.bufferDataRange {
-                        startData = self.bufferData
-                        startData.append(data)
-                    } else {
-                        startDataRange = range
-                    }
+                if self.bufferDataRange.isEmpty {
+                    self.bufferData = data
+                    self.bufferDataRange = range
+                } else {
+                    self.bufferData.append(data)
+                    self.bufferDataRange = self.bufferDataRange.rangeAdd(range)
                 }
-                self.handleFetchedData(startData, at: startDataRange)
+                self.handleFetchedData(self.bufferData, at: self.bufferDataRange)
             } else {
                 Cache_Print("loader fetched Data: \(data.count)", level: LogLevel.resource)
                 if self.currentLoadingRequest?.contentInformationRequest == nil {
@@ -210,20 +206,20 @@ extension CachedItemResourceLoader: FileDataDelegate {
     }
     
     fileprivate func handleFetchedData(_ data: Data, at range: DataRange) {
-        var startDataRange = range
-        let startLowerBound: Int64 = startDataRange.lowerBound
+        let startDataRange = range
         var rangeTaken: DataRange = DataRange(uncheckedBounds: (lower: 0, upper: 0))
         
         let rangeRequestList = filterCurrentRequest(startDataRange)
         print("\n fetch Range start: \(startDataRange)")
         for request in rangeRequestList {
             if let dataRequest = request.dataRequest {
-                let dataRange = DataRange(uncheckedBounds: (Int64(dataRequest.requestedOffset), upper: Int64(dataRequest.requestedOffset)+Int64(dataRequest.requestedLength)))
-                print("  fetch range _______________________________")
+                print("  fetch range : requested range \(dataRequest.currentOffset) ")
+                let dataRange = DataRange(uncheckedBounds: (Int64(dataRequest.currentOffset), upper: Int64(dataRequest.requestedOffset)+Int64(dataRequest.requestedLength)))
+                print("  fetch range -------------------------------")
                 print("  fetch range data range: \(dataRange)")
-                print("  fetch range _______________________________")
+                print("  fetch range -------------------------------")
                 if let neededRange = dataRange.rangeClamped(startDataRange) {
-                    dataRequest.respond(with: data.subdata(in: neededRange.rangeStartFrom(Int(startLowerBound))))
+                    dataRequest.respond(with: data.subdata(in: neededRange.rangeStartFrom(0)))
                     if neededRange.upperBound == dataRange.upperBound {
                         request.finishLoading()
                     }
@@ -236,17 +232,6 @@ extension CachedItemResourceLoader: FileDataDelegate {
                     }
                 }
             }
-        }
-        print(" fetch Range before left: \(startDataRange)")
-        startDataRange = startDataRange.rangeDecrease(rangeTaken)
-        print(" fetch Range taken range \(rangeTaken)")
-        print(" fetch Range after left: \(startDataRange) \n")
-        if !startDataRange.isEmpty {
-            bufferData = data.subdata(in: startDataRange.rangeStartFrom(Int(startLowerBound)))
-            bufferDataRange = startDataRange
-        } else {
-            bufferData = Data()
-            bufferDataRange = DataRange(uncheckedBounds: (lower: 0, upper: 0))
         }
     }
     

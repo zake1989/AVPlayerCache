@@ -102,7 +102,7 @@ class CacheFileHandler {
         return false
     }
     
-    func perDownloadData() {
+    func preDownloadData() {
         let fileLength = Int(savedCacheData.fileInfo.contentLength)
         if fileLength != 0 {
             fetchData(at: DataRange(uncheckedBounds: (0, Int64(BasicFileData.predownloadSize))))
@@ -117,15 +117,29 @@ class CacheFileHandler {
         }
     }
     
+    func fullyPreDownloadData() {
+        let fileLength = Int(savedCacheData.fileInfo.contentLength)
+        if fileLength != 0 {
+            fetchData(at: DataRange(uncheckedBounds: (0, Int64(fileLength))))
+        } else {
+            preDownloadData()
+        }
+    }
+    
+    fileprivate func preDownloadingCheck() {
+        if FileDownlaodingManager.shared.isDownloading(itemURL.baseURLString) {
+//            PreDownloadManager.shared.stopProcessSource()
+            FileDownlaodingManager.shared.endDownloading(itemURL.baseURLString)
+        }
+    }
+    
     func startLoadFullData() {
         let fileLength = savedCacheData.fileInfo.contentLength
         if fileLength != 0 {
             startOffSet = 0
             fetchData(at: DataRange(uncheckedBounds: (0, fileLength)))
         } else {
-            guard !FileDownlaodingManager.shared.isDownloading(itemURL.baseURLString) else {
-                return
-            }
+            preDownloadingCheck()
             FileDownlaodingManager.shared.startDownloading(itemURL.baseURLString)
             startOffSet = 0
             downloadFileWithRange(DataRange(uncheckedBounds: (0, 0)))
@@ -133,6 +147,7 @@ class CacheFileHandler {
     }
     
     func fetchData(at range: DataRange) {
+        preDownloadingCheck()
         guard range.lowerBound < range.upperBound,
             !FileDownlaodingManager.shared.isDownloading(itemURL.baseURLString) else {
                 Cache_Print("loader data not fetched", level: LogLevel.resource)
@@ -155,9 +170,6 @@ class CacheFileHandler {
         
         var endRange = range
         let fileLength = Int(savedCacheData.fileInfo.contentLength)
-        //        if range.upperBound - range.lowerBound > 2 && range.lowerBound == 0 {
-        //            endRange = DataRange.init(uncheckedBounds: (0, max(range.lowerBound, fileLength)))
-        //        } else
         if fileLength != 0 && range.upperBound > fileLength {
             endRange = DataRange.init(uncheckedBounds: (range.lowerBound, Int64(fileLength)))
         }
@@ -218,8 +230,17 @@ class CacheFileHandler {
         guard let reader = fileReader else {
             return nil
         }
-        reader.seek(toFileOffset: UInt64(range.lowerBound))
-        return reader.readData(ofLength: Int(range.upperBound-range.lowerBound))
+        var data = Data()
+        let exception = tryBlock {
+            reader.seek(toFileOffset: UInt64(range.lowerBound))
+            data = reader.readData(ofLength: Int(range.upperBound-range.lowerBound))
+        }
+        if let e = exception {
+            Cache_Print("data faeched on local error \(e)", level: LogLevel.error)
+            return nil
+        } else {
+            return data
+        }
     }
     
     fileprivate func readFileWithRange(_ range: DataRange) {
@@ -228,10 +249,16 @@ class CacheFileHandler {
         }
         var data = Data()
         fileOperationQueue.addOperation { [weak self] in
-            reader.seek(toFileOffset: UInt64(range.lowerBound))
-            data = reader.readData(ofLength: Int(range.upperBound-range.lowerBound))
-            Cache_Print("data fetched on local: \(data.count)", level: LogLevel.file)
-            self?.delegate?.fileHandler(didFetch: data, at: range)
+            let exception = tryBlock {
+                reader.seek(toFileOffset: UInt64(range.lowerBound))
+                data = reader.readData(ofLength: Int(range.upperBound-range.lowerBound))
+                Cache_Print("data fetched on local: \(data.count)", level: LogLevel.file)
+            }
+            if let e = exception {
+                Cache_Print("data faeched on local error \(e)", level: LogLevel.error)
+            } else {
+                self?.delegate?.fileHandler(didFetch: data, at: range)
+            }
         }
     }
     
@@ -243,8 +270,13 @@ class CacheFileHandler {
             guard let strongSelf = self else {
                 return
             }
-            writer.seek(toFileOffset: UInt64(range.lowerBound))
-            writer.write(data)
+            let exception = tryBlock {
+                writer.seek(toFileOffset: UInt64(range.lowerBound))
+                writer.write(data)
+            }
+            if let e = exception {
+                Cache_Print("data written to local file error \(e)", level: LogLevel.error)
+            }
             strongSelf.countSpeed(Int64(data.count))
             strongSelf.savedCacheData.fileInfo.downloadedTotalTime += strongSelf.timeTake
             strongSelf.saveRange(range)

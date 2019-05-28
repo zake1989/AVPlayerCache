@@ -196,7 +196,7 @@ extension CachedItemResourceLoader: FileDataDelegate {
         return loadingRequestList.filter { (request) -> Bool in
             return request.dataRequest != nil && !request.isCancelled && !request.isFinished
             }.filter { (request) -> Bool in
-                if let dataRequest = request.dataRequest {
+                if let dataRequest = request.dataRequest, request.contentInformationRequest == nil {
                     let dataRange = DataRange(uncheckedBounds: (Int64(dataRequest.requestedOffset),
                                                                 upper: Int64(dataRequest.requestedOffset)+Int64(dataRequest.requestedLength)))
                     return dataRange.overlaps(startDataRange)

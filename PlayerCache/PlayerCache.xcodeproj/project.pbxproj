@@ -42,6 +42,7 @@
 		453189B32251F8A800CBAA74 /* CacheMetaData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheMetaData.swift; sourceTree = "<group>"; };
 		4544BA4322602BA500461066 /* CachePlayerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachePlayerItem.swift; sourceTree = "<group>"; };
 		4544BA4622602BD200461066 /* ItemPlayer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemPlayer.swift; sourceTree = "<group>"; };
+		45A2C50F229D102F00D85064 /* ExceptionCatcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ExceptionCatcher.h; sourceTree = "<group>"; };
 		45B0A78B225DCFB6008AB42C /* FileDownlaodingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileDownlaodingManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -105,6 +106,7 @@
 				453189B32251F8A800CBAA74 /* CacheMetaData.swift */,
 				452818B32252FDFF0041CC52 /* CacheDownloader.swift */,
 				452818B52252FFC40041CC52 /* CacheFileHandler.swift */,
+				45A2C50F229D102F00D85064 /* ExceptionCatcher.h */,
 			);
 			path = Cache;
 			sourceTree = "<group>";

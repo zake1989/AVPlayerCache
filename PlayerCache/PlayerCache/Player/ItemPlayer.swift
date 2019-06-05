@@ -359,7 +359,8 @@ extension ItemPlayer {
                                                         }
                                                         if time.seconds > 0 &&
                                                             strongSelf.playStatus != .paused &&
-                                                            strongSelf.playStatus != .playing {
+                                                            strongSelf.playStatus != .playing &&
+                                                            strongSelf.playStatus != .seeking {
                                                             strongSelf.playStatus = .playing
                                                         }
                                                         strongSelf.itemPlayerDelegate?.playAtTime(time.seconds,
@@ -372,7 +373,7 @@ extension ItemPlayer {
     fileprivate func bufferStatusObserver() {
         guard let playerItem = player.currentItem else { return }
         playBackStatusObserver = playerItem.observe(\AVPlayerItem.isPlaybackLikelyToKeepUp,
-                                                    options: [.new,.old],
+                                                    options: [.new, .old],
                                                     changeHandler: { [weak self] (item, keepUp) in
                                                         guard let strongSelf = self else {
                                                             return
@@ -389,9 +390,9 @@ extension ItemPlayer {
                                                                 Player_Print("not keep up reason: \(String(describing: strongSelf.player.reasonForWaitingToPlay))")
                                                                 if (strongSelf.player.reasonForWaitingToPlay == nil && strongSelf.playOnNilKeepUpReason) {
                                                                     strongSelf.playOnNilKeepUpReason = false
-                                                                    strongSelf.actionWhenBufferingRateReason()
+                                                                    // strongSelf.actionWhenBufferingRateReason()
                                                                 } else if strongSelf.player.reasonForWaitingToPlay == AVPlayer.WaitingReason.toMinimizeStalls {
-                                                                    strongSelf.actionWhenBufferingRateReason()
+                                                                    // strongSelf.actionWhenBufferingRateReason()
                                                                 }
                                                             }
                                                             strongSelf.actionWhenPerparing()

@@ -105,6 +105,7 @@ class CacheFileHandler {
     func preDownloadData() {
         let fileLength = Int(savedCacheData.fileInfo.contentLength)
         if fileLength != 0 {
+            onPredownload = true
             fetchData(at: DataRange(uncheckedBounds: (0, Int64(BasicFileData.predownloadSize))))
         } else {
             guard !FileDownlaodingManager.shared.isDownloading(itemURL.baseURLString) else {
@@ -120,6 +121,7 @@ class CacheFileHandler {
     func fullyPreDownloadData() {
         let fileLength = Int(savedCacheData.fileInfo.contentLength)
         if fileLength != 0 {
+            onPredownload = true
             fetchData(at: DataRange(uncheckedBounds: (0, Int64(fileLength))))
         } else {
             preDownloadData()
@@ -127,8 +129,7 @@ class CacheFileHandler {
     }
     
     fileprivate func preDownloadingCheck() {
-        if FileDownlaodingManager.shared.isDownloading(itemURL.baseURLString) {
-//            PreDownloadManager.shared.stopProcessSource()
+        if FileDownlaodingManager.shared.isDownloading(itemURL.baseURLString) && !onPredownload {
             FileDownlaodingManager.shared.endDownloading(itemURL.baseURLString)
         }
     }
@@ -209,7 +210,9 @@ class CacheFileHandler {
             return
         }
         startOffSet = chunk.range.lowerBound
-        currentChunkList.removeFirst()
+        if currentChunkList.count > 0 {
+            currentChunkList.removeFirst()
+        }
         if chunk.type == .local {
             readFileWithRange(chunk.range)
             processChunk()

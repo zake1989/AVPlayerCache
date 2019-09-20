@@ -27,11 +27,16 @@ import AVFoundation
 //http://a.vskitcdn.com/V/ed88830c-9530-4c53-b851-73edf1d0f499_z.mp4
 //http://a.vskitcdn.com/V/8f39f332-1589-44da-871f-676894d55755_z.mp4
 //http://a.vskitcdn.com/V/jiale_3s.mp4
+//http://a.vskitcdn.com/V/jiale_1.mp4
+//http://a.vskitcnd.com/V/jiale_2.mp4
+//http://a.vskitcnd.com/V/jiale_3.mp4
+//http://a.vskitcnd.com/V/jiale_4.mp4
+//http://a.vskitcnd.com/V/jiale_5.mp4
 
 
 class ViewController: UIViewController {
     
-    let urlString: String = "http://a.vskitcdn.com/V/jiale_3s.mp4"
+    let urlString: String = "http://a.vskitcdn.com/V/jiale_2.mp4"
 
     lazy var cacheFileHandler: CacheFileHandler = CacheFileHandler(videoUrl: urlString)
     
@@ -67,6 +72,10 @@ class ViewController: UIViewController {
 }
 
 extension ViewController: ItemPlayerDelegate {
+    func needRestartLoading() {
+        
+    }
+    
     func itemTotalDuration(_ duration: TimeInterval) {
 //        print("item player: item duration -> \(duration)")
     }
@@ -105,7 +114,7 @@ extension ViewController: FileDataDelegate {
     }
     
     func testCache() {
-        let range: DataRange = DataRange(uncheckedBounds: (0, 2))
+//        let range: DataRange = DataRange(uncheckedBounds: (0, 2))
         cacheFileHandler.delegate = self
 //        cacheFileHandler.fetchData(at: range)
 //        cacheFileHandler.perDownloadData()
@@ -126,7 +135,7 @@ extension ViewController: FileDataDelegate {
     }
     
     @objc func start() {
-        let range: DataRange = DataRange(uncheckedBounds: (0, 2000*1000))
+//        let range: DataRange = DataRange(uncheckedBounds: (0, 2000*1000))
 //        cacheFileHandler.fetchData(at: range)
     }
 }

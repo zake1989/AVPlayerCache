@@ -76,6 +76,10 @@ extension ViewController: ItemPlayerDelegate {
         
     }
     
+    func didSetLayerGravity() {
+        
+    }
+    
     func itemTotalDuration(_ duration: TimeInterval) {
 //        print("item player: item duration -> \(duration)")
     }

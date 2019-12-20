@@ -19,6 +19,7 @@ enum ItemPlayerStatus {
 
 protocol ItemPlayerDelegate: class {
     func needRestartLoading()
+    func didSetLayerGravity()
     func itemTotalDuration(_ duration: TimeInterval)
     func playAtTime(_ currentTime: TimeInterval, itemDuration: TimeInterval, progress: Double)
     func steamingAtTime(_ steamingDuration: TimeInterval, itemDuration: TimeInterval)
@@ -51,7 +52,7 @@ class ItemPlayer {
     var playArea: CGRect = CGRect.zero {
         didSet {
             playerLayer.frame = playArea
-            playerLayer.removeAllAnimations()
+            playerLayer.speed = 999
         }
     }
     
@@ -128,6 +129,8 @@ class ItemPlayer {
     
     fileprivate var oldPlayTime: CMTime = CMTime.zero
     
+    fileprivate var duringErrorHandle: Bool = false
+    
     deinit {
         Player_Print("deinit video player")
         if let item = player.currentItem {
@@ -135,13 +138,18 @@ class ItemPlayer {
                                                       name: NSNotification.Name.AVPlayerItemDidPlayToEndTime,
                                                       object: item)
         }
-        
+        NotificationCenter.default.removeObserver(self)
         if let observer = timeObserver {
             player.removeTimeObserver(observer)
         }
     }
     
-    init(item: AVPlayerItem, needForceAudio: Bool = false) {
+    init(item: AVPlayerItem,
+         needForceAudio: Bool = false,
+         area: CGRect = .zero,
+         delegate: ItemPlayerDelegate? = nil) {
+        itemPlayerDelegate = delegate
+        playArea = area
         itemAsset = item.asset
         if #available(iOS 10.0, *) {
             item.preferredForwardBufferDuration = bufferDuration
@@ -149,9 +157,18 @@ class ItemPlayer {
         player = AVPlayer(playerItem: item)
         playerLayer = AVPlayerLayer(player: player)
         initOnPlayer(needForceAudio)
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(self.audioRouteChanged(note:)),
+                                               name: AVAudioSession.routeChangeNotification,
+                                               object: nil)
     }
     
-    init(asset: AVAsset, needForceAudio: Bool = false) {
+    init(asset: AVAsset,
+         needForceAudio: Bool = false,
+         area: CGRect = .zero,
+         delegate: ItemPlayerDelegate? = nil) {
+        itemPlayerDelegate = delegate
+        playArea = area
         itemAsset = asset
         let playerItem = AVPlayerItem(asset: itemAsset)
         if #available(iOS 10.0, *) {
@@ -160,6 +177,16 @@ class ItemPlayer {
         player = AVPlayer(playerItem: playerItem)
         playerLayer = AVPlayerLayer(player: player)
         initOnPlayer(needForceAudio)
+    }
+    
+    @objc fileprivate func audioRouteChanged(note: Notification) {
+        if let userInfo = note.userInfo {
+            if let reason = userInfo[AVAudioSessionRouteChangeReasonKey] as? Int {
+                if reason == Int(AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue) {
+                    pause()
+                }
+            }
+        }
     }
     
     fileprivate func initOnPlayer(_ needForceAudio: Bool) {
@@ -172,6 +199,9 @@ class ItemPlayer {
         addVideoProgressHandle()
         // 输出总时间
         outPutTime()
+//        if needForceAudio {
+//            MPAudioSessionManager.default.openAudioSession()
+//        }
     }
     
     fileprivate func outPutTime() {
@@ -181,7 +211,14 @@ class ItemPlayer {
             }
             return
         }
-        itemPlayerDelegate?.itemTotalDuration(itemDuration.seconds)
+        outPutDuration(itemDuration.seconds)
+    }
+    
+    fileprivate func outPutDuration(_ duration: TimeInterval) {
+        guard !duration.isNaN else {
+            return
+        }
+        itemPlayerDelegate?.itemTotalDuration(duration)
     }
     
     func stopPlayer() {
@@ -223,14 +260,16 @@ extension ItemPlayer {
         playStatus = .paused
     }
     
-    func playFromBegin() {
+    func playFromBegin(_ forcePlay: Bool = false) {
         atEnd = false
         player.pause()
         player.seek(to: CMTime.zero) { [weak self] (success) in
-            guard let strongSelf = self, strongSelf.playStatus == .playing else {
+            guard let strongSelf = self else {
                 return
             }
-            strongSelf.checkPlayerErrorPlay()
+            if strongSelf.playStatus == .playing || forcePlay {
+                strongSelf.checkPlayerErrorPlay()
+            }
         }
     }
     
@@ -247,11 +286,14 @@ extension ItemPlayer {
         }
     }
     
-    func changeItemURL(_ itemAsset: AVAsset) {
+    func changeItemURL(_ itemAsset: AVAsset, needCallPlay: Bool = true) {
         player.pause()
         playStatus = .preparing
+        clearItem()
+        self.itemAsset.cancelLoading()
         self.itemAsset = itemAsset
         readyPlayerItem()
+        needForcePlay = needCallPlay
     }
     
     func fastSeek(_ progress: Double) {
@@ -284,10 +326,12 @@ extension ItemPlayer {
                         }
                         strongSelf.atEnd = progress == 1.0
                         if let c = complete {
+                            strongSelf.playStatus = .paused
                             c()
                             return
                         }
                         if seekingOldStatus == .playing {
+                            strongSelf.playStatus = .paused
                             strongSelf.play()
                         } else {
                             if ((strongSelf.player.rate == 0) || (strongSelf.player.error != nil)) {
@@ -303,14 +347,20 @@ extension ItemPlayer {
     }
     
     func setGravityWith(_ size: CGSize) {
-        var targetGravity: AVLayerVideoGravity = .resizeAspectFill
-        if size.width > 0 && size.height > 0, 3*size.height/size.width < 4 {
-            targetGravity = .resizeAspect
+        var targetGravity: AVLayerVideoGravity = .resizeAspect
+        if size.width > 0,
+            size.height > 0,
+            playArea.width > 0,
+            playArea.height > 0,
+            size.height/size.width > 15/10 {
+            targetGravity = .resizeAspectFill
         }
-        if playerLayer.videoGravity != targetGravity {
+        if playerLayer.videoGravity != targetGravity || playerLayer.frame != playArea  {
             playerLayer.videoGravity = targetGravity
+            playerLayer.frame = playArea
+            playerLayer.speed = 999
+            itemPlayerDelegate?.didSetLayerGravity()
         }
-        playerLayer.removeAllAnimations()
     }
 }
 
@@ -387,6 +437,7 @@ extension ItemPlayer {
                 player.removeTimeObserver(observer)
                 timeObserver = nil
             }
+            Player_Print("player error: duration wrong \(String(describing: player.error))")
             itemPlayerDelegate?.needRestartLoading()
         }
         return timeDone
@@ -401,7 +452,7 @@ extension ItemPlayer {
                                                         guard let strongSelf = self,
                                                             strongSelf.checkDecodeDuration(),
                                                             strongSelf.checkPlayerNoError() else {
-                                                                return
+                                                            return
                                                         }
                                                         let itemDuration = strongSelf.itemDuration.seconds
                                                         if strongSelf.oldPlayTime != time &&
@@ -410,8 +461,7 @@ extension ItemPlayer {
                                                             strongSelf.playStatus != .playing &&
                                                             strongSelf.playStatus != .seeking {
                                                             strongSelf.playStatus = .playing
-                                                            // strongSelf.needForcePlay = false
-                                                            // print("player change: close force play on start play \(strongSelf.player.rate)")
+//                                                            strongSelf.needForcePlay = false
                                                         }
                                                         strongSelf.oldPlayTime = time
                                                         strongSelf.itemPlayerDelegate?.playAtTime(abs(time.seconds),
@@ -482,7 +532,6 @@ extension ItemPlayer {
         seekProgressAfterPrepare = 0
         if oldStatus == .playing || needForcePlay {
             checkPlayerErrorPlay()
-            //            playStatus = .playing
         } else {
             player.pause()
             playStatus = .paused
@@ -493,7 +542,6 @@ extension ItemPlayer {
         // 可以开始播放的状态 如果开启强制播放 就强制播放 如果没有开启强制播放 就保持暂停
         if oldStatus == .playing || needForcePlay {
             checkPlayerErrorPlay()
-            //            playStatus = .playing
         } else {
             player.pause()
             playStatus = .paused
@@ -526,7 +574,11 @@ extension ItemPlayer {
     
     fileprivate func checkPlayerNoError() -> Bool {
         guard player.error == nil else {
-            itemPlayerDelegate?.needRestartLoading()
+            if !duringErrorHandle {
+                duringErrorHandle = true
+                Player_Print("player error: \(String(describing: player.error))")
+                itemPlayerDelegate?.needRestartLoading()
+            }
             return false
         }
         return true
@@ -559,6 +611,7 @@ extension ItemPlayer {
     }
     
     @objc fileprivate func didReachEnd() {
+        Player_Print("play at time: player reach end")
         itemPlayerDelegate?.didReachEnd()
         guard loopPlay else {
             var duration = itemDuration.seconds
@@ -591,10 +644,24 @@ extension ItemPlayer {
     }
     
     fileprivate func readyPlayerItem() {
-        let asset = itemAsset
-        asset.loadValuesAsynchronously(forKeys: ["duration" , "tracks"]) { [weak self] in
-            guard let strongSelf = self else { return }
-            let playerItem = AVPlayerItem.init(asset: asset)
+        let keys = ["duration" , "tracks"]
+        itemAsset.loadValuesAsynchronously(forKeys: keys) { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            var loaded: Bool = true
+            for key in keys {
+                var error: NSError?
+                let status: AVKeyValueStatus = strongSelf.itemAsset.statusOfValue(forKey: key, error: &error)
+                if status != AVKeyValueStatus.loaded {
+                    loaded = false
+                }
+            }
+            guard loaded else {
+                return
+            }
+            let playerItem = AVPlayerItem(asset: strongSelf.itemAsset)
+            
             DispatchQueue.main.async {
                 strongSelf.replaceItemAndStartPlay(playerItem)
             }
@@ -613,12 +680,11 @@ extension ItemPlayer {
         atEnd = false
         player = AVPlayer(playerItem: item)
         playerLayer = AVPlayerLayer(player: player)
-        playerLayer.frame = playArea
-        playerLayer.removeAllAnimations()
         initOnPlayer(true)
         // 输出总时间
         let totalTime = item.duration.seconds
-        self.itemPlayerDelegate?.itemTotalDuration(totalTime)
+        outPutDuration(totalTime)
+        duringErrorHandle = false
     }
     
     fileprivate func replaceItemAndStartPlay(_ item: AVPlayerItem) {
@@ -630,18 +696,28 @@ extension ItemPlayer {
             player.removeTimeObserver(observer)
             timeObserver = nil
         }
-        //        player.replaceCurrentItem(with: nil)
+        player.replaceCurrentItem(with: nil)
         atEnd = false
         player.replaceCurrentItem(with: item)
         playerLayer = AVPlayerLayer(player: player)
         // 输出总时间
         let totalTime = item.duration.seconds
-        self.itemPlayerDelegate?.itemTotalDuration(totalTime)
+        outPutDuration(totalTime)
         if timeObserver == nil {
             initOnPlayer(false)
         } else {
             addVideoEventHandle()
         }
+    }
+    
+    fileprivate func clearItem() {
+        resetPlayerItemInfo()
+        if let observer = timeObserver {
+            player.removeTimeObserver(observer)
+            timeObserver = nil
+        }
+        player.replaceCurrentItem(with: nil)
+        atEnd = false
     }
 }
 

@@ -33,6 +33,8 @@ class CachedItemResourceLoader: NSObject {
     
     fileprivate var onSingleRequestModel: Bool = false
     
+    fileprivate var reachTargetSize: Bool = false
+    
     fileprivate var task: DispatchWorkItem?
     
     fileprivate var dataReceiveCountOnPreparing: Int = 0
@@ -72,7 +74,7 @@ class CachedItemResourceLoader: NSObject {
         task = DispatchWorkItem { [weak self] in
             self?.delegate?.noMoreRequestCheck()
         }
-        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.4, execute: task!)
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now(), execute: task!)
     }
     
     fileprivate func processCurrentRequest(loadingRequest: AVAssetResourceLoadingRequest) {
@@ -158,7 +160,13 @@ extension CachedItemResourceLoader: FileDataDelegate {
                     self.bufferData.append(data)
                     self.bufferDataRange = self.bufferDataRange.rangeAdd(range)
                 }
-                self.handleFetchedData(self.bufferData, at: self.bufferDataRange)
+                let size = self.bufferDataRange.upperBound - self.bufferDataRange.lowerBound
+                if size > BasicFileData.firstBufferMinSize {
+                    self.reachTargetSize = true
+                }
+                if self.reachTargetSize {
+                    self.handleFetchedData(self.bufferData, at: self.bufferDataRange)
+                }
             } else {
                 Cache_Print("loader fetched Data: \(data.count)", level: LogLevel.resource)
                 if self.currentLoadingRequest?.contentInformationRequest == nil {
@@ -236,6 +244,16 @@ extension CachedItemResourceLoader: FileDataDelegate {
     }
     
     fileprivate func handleRequestAfterFullyDownloaded() {
+        if let request = fetchInfoRequest(),
+            let infoRequest = request.contentInformationRequest,
+            let info = cacheFileHandler?.savedCacheData.fileInfo {
+            infoRequest.contentType = info.contentType
+            infoRequest.contentLength = Int64(info.contentLength)
+            infoRequest.isByteRangeAccessSupported = info.byteRangeAccessSupported
+            request.finishLoading()
+            removeRequest()
+        }
+        
         for request in loadingRequestList {
             if let infoRequest = request.contentInformationRequest, let info = cacheFileHandler?.savedCacheData.fileInfo {
                 infoRequest.contentType = info.contentType

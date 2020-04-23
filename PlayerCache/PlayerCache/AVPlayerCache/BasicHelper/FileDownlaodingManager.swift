@@ -12,6 +12,8 @@ class FileDownlaodingManager {
     
     static let shared = FileDownlaodingManager()
     
+    private let urlProcessQueue = DispatchQueue(label: "Video.URL.Process.Queue", qos: .utility ,attributes: .concurrent)
+    
     private var urlList: [String] = []
     
     private init() {
@@ -19,33 +21,24 @@ class FileDownlaodingManager {
     }
     
     func isDownloading(_ url: String) -> Bool {
-        objc_sync_enter(self)
-        defer {
-            objc_sync_exit(self)
+        var containElement: Bool = false
+        self.urlProcessQueue.sync {
+            containElement = self.urlList.contains(url)
         }
-        return urlList.filter { (u) -> Bool in
-            return u == url
-        }.count != 0
+        return containElement
     }
 
     func startDownloading(_ url: String) {
-        objc_sync_enter(self)
-        defer {
-            objc_sync_exit(self)
+        urlProcessQueue.async(flags:.barrier) {
+            self.urlList.append(url)
         }
-        urlList.append(url)
     }
     
     func endDownloading(_ url: String) {
-        objc_sync_enter(self)
-        defer {
-            objc_sync_exit(self)
+        urlProcessQueue.async(flags:.barrier) {
+            self.urlList = self.urlList.filter({ (content) -> Bool in
+                return content != url
+            })
         }
-        guard urlList.count > 0, let index = urlList.enumerated().filter({ (content) -> Bool in
-            return content.element == url
-        }).first?.offset  else {
-            return
-        }
-        urlList.remove(at: index)
     }
 }

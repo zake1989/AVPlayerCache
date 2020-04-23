@@ -42,9 +42,6 @@ class CacheFilePathHelper: NSObject {
         let endDir = playerCacheStore.appendingPathComponentOnFile(dirName)
         if !directoryExistAtPath(endDir) {
             _ = createDirectoryAtPath(endDir)
-            DispatchQueue.global().async {
-                clearHalfCache()
-            }
         }
         return endDir
     }
@@ -150,20 +147,28 @@ class CacheFilePathHelper: NSObject {
         return date
     }
     
-    open class func clearHalfCache() {
+    open class func clearAllCache() {
+        let paths = readDirectoriesAtPath(playerCacheStore)
+        for item in paths.enumerated() {
+            _ = removeFileAtPath(item.element)
+        }
+    }
+    
+    open class func clearHalfCache(_ endDir: String) {
         let paths = readDirectoriesAtPath(playerCacheStore)
         guard paths.count > BasicFileData.maxCacheSize else {
             return
         }
-        let sortedPath = paths.sorted { (lPath, rPath) -> Bool in
-            return createdDateForFile(lPath) < createdDateForFile(rPath)
+        let sortedPath = paths.filter { (path) -> Bool in
+            return path != endDir
+            }.sorted { (lPath, rPath) -> Bool in
+                return createdDateForFile(lPath) < createdDateForFile(rPath)
         }
-        
         for item in sortedPath.enumerated() {
-            if item.offset > max(paths.count-10, 10) {
+            if item.offset > 5 {
                 return
             } else {
-                _ = removeFileAtPath(item.element)
+               _ = removeFileAtPath(item.element)
             }
         }
     }

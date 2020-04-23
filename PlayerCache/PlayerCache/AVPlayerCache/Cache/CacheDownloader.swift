@@ -45,7 +45,7 @@ class SessionDataForworder: NSObject, URLSessionDataDelegate {
     
     fileprivate var bufferData: Data = Data()
     
-    fileprivate let dataHandleQueue = DispatchQueue(label: BasicFileData.dataHandleQueueLabel)
+    fileprivate let dataHandleQueue = DispatchQueue(label: BasicFileData.dataHandleQueueLabel, qos: .userInteractive)
     
     func urlSession(_ session: URLSession,
                     didReceive challenge: URLAuthenticationChallenge,
@@ -127,6 +127,7 @@ class SessionDataForworder: NSObject, URLSessionDataDelegate {
 
 class CacheDownloader: NSObject {
     deinit {
+        NotificationCenter.default.removeObserver(self)
         Cache_Print("deinit cache downloader", level: LogLevel.dealloc)
     }
     
@@ -135,6 +136,8 @@ class CacheDownloader: NSObject {
     fileprivate var session: URLSession?
     fileprivate var task: URLSessionDataTask?
     fileprivate var url: URL?
+    
+    fileprivate var date: CFAbsoluteTime = CFAbsoluteTimeGetCurrent()
     
     fileprivate lazy var sessionDataForworder: SessionDataForworder = {
         let forworder = SessionDataForworder()
@@ -150,11 +153,27 @@ class CacheDownloader: NSObject {
     
     fileprivate var cancel: Bool = false
     
+    override init() {
+        super.init()
+//        NotificationCenter.default.addObserver(self, selector: #selector(self.pauseCurrentTask), name: .PauseDownload, object: nil)
+//        NotificationCenter.default.addObserver(self, selector: #selector(self.resumeCurrentTask), name: .ResumeDownload, object: nil)
+    }
+    
+    @objc fileprivate func pauseCurrentTask() {
+        task?.suspend()
+    }
+    
+    @objc fileprivate func resumeCurrentTask() {
+        task?.resume()
+    }
+    
     func stopDownload() {
-        sessionQueue.addOperation { [weak self] in
+        let operation = BlockOperation { [weak self] in
             self?.cancel = true
             self?.resetSession()
         }
+        operation.queuePriority = .veryHigh
+        sessionQueue.addOperation(operation)
     }
     
     func startDownload(from url: URL, at range: DataRange) {
@@ -170,11 +189,14 @@ class CacheDownloader: NSObject {
         }
         task = session?.dataTask(with: request)
         task?.resume()
+        date = CFAbsoluteTimeGetCurrent()
     }
     
     fileprivate func createSession() {
         cancel = false
         let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForResource = 60
+        configuration.timeoutIntervalForRequest = 60
         session = URLSession(configuration: configuration, delegate: sessionDataForworder, delegateQueue: sessionQueue)
     }
     
@@ -235,8 +257,10 @@ extension CacheDownloader: SessionForwordDelegate {
     func urlSession(_ session: URLSession,
                     task: URLSessionTask,
                     didCompleteWithError error: Error?) {
-        Cache_Print("finish download: \(error?.localizedDescription ?? "no error")", level: LogLevel.net)
         outputDelegate?.urlSession(session, task: task, didCompleteWithError: error)
+        let endTime = CFAbsoluteTimeGetCurrent()
+        let duration = round((endTime-date)*1000)
+        Cache_Print("finish download: \(error?.localizedDescription ?? "no error")", level: LogLevel.net)
+        Cache_Print("finish download: duration \(duration)ms bytes \(task.countOfBytesReceived)", level: LogLevel.net)
     }
 }
-

@@ -115,7 +115,7 @@ struct SavedCacheData: Codable {
 struct CacheMetaData: Equatable, Codable {
     var type: CacheType
     var range: DataRange
-    
+
     init(type: CacheType, range: DataRange) {
         self.type = type
         self.range = range

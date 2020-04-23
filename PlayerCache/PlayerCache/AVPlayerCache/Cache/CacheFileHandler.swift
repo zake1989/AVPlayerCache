@@ -74,7 +74,7 @@ class CacheFileHandler {
     
     fileprivate var itemURL: ItemURL = ItemURL()
     
-    fileprivate var lastTime: TimeInterval = 0
+    fileprivate var lastTime: CFAbsoluteTime = CFAbsoluteTimeGetCurrent()
     
     fileprivate var timeTake: Int64 = 0
     
@@ -280,8 +280,6 @@ class CacheFileHandler {
             if let e = exception {
                 Cache_Print("data written to local file error \(e)", level: LogLevel.error)
             }
-            strongSelf.countSpeed(Int64(data.count))
-            strongSelf.savedCacheData.fileInfo.downloadedTotalTime += strongSelf.timeTake
             strongSelf.saveRange(range)
             strongSelf.delegate?.fileHandler(didFetch: data, at: range)
         }
@@ -293,12 +291,13 @@ class CacheFileHandler {
     }
     
     fileprivate func setStartTime() {
-        lastTime = Date().timeIntervalSince1970
+        lastTime = CFAbsoluteTimeGetCurrent()
     }
     
     fileprivate func countSpeed(_ bytes: Int64) {
-        let currentTime = Date().timeIntervalSince1970
+        let currentTime = CFAbsoluteTimeGetCurrent()
         timeTake = Int64(max(currentTime - lastTime, 0)*1000)
+        savedCacheData.fileInfo.downloadedTotalTime += timeTake
         if timeTake > 0 {
             savedCacheData.downloadSpeed = Int(bytes/(timeTake))
             lastTime = currentTime
@@ -341,6 +340,7 @@ extension CacheFileHandler: SessionOutputDelegate {
             print(e)
             return
         }
+        countSpeed(task.countOfBytesReceived)
         processChunk(error)
     }
 }

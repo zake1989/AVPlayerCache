@@ -437,7 +437,6 @@ extension ItemPlayer {
                 player.removeTimeObserver(observer)
                 timeObserver = nil
             }
-            Player_Print("player error: duration wrong \(String(describing: player.error))")
             itemPlayerDelegate?.needRestartLoading()
         }
         return timeDone
@@ -576,7 +575,6 @@ extension ItemPlayer {
         guard player.error == nil else {
             if !duringErrorHandle {
                 duringErrorHandle = true
-                Player_Print("player error: \(String(describing: player.error))")
                 itemPlayerDelegate?.needRestartLoading()
             }
             return false
@@ -611,7 +609,6 @@ extension ItemPlayer {
     }
     
     @objc fileprivate func didReachEnd() {
-        Player_Print("play at time: player reach end")
         itemPlayerDelegate?.didReachEnd()
         guard loopPlay else {
             var duration = itemDuration.seconds
@@ -661,7 +658,6 @@ extension ItemPlayer {
                 return
             }
             let playerItem = AVPlayerItem(asset: strongSelf.itemAsset)
-            
             DispatchQueue.main.async {
                 strongSelf.replaceItemAndStartPlay(playerItem)
             }

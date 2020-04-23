@@ -52,13 +52,14 @@ class CachePlayerItem {
         guard let url = URL(string: localURL) else {
             return nil
         }
+        loader.delegate = nil
         loader = CachedItemResourceLoader(true)
         loader.delegate = self
         let asset = AVURLAsset(url: url)
         asset.resourceLoader.setDelegate(loader, queue: DispatchQueue.main)
         let item = AVPlayerItem(asset: asset)
         item.canUseNetworkResourcesForLiveStreamingWhilePaused = true
-        item.preferredPeakBitRate = 1500
+        item.preferredPeakBitRate = 4000
         if #available(iOS 10.0, *) {
             item.preferredForwardBufferDuration = 1
         }

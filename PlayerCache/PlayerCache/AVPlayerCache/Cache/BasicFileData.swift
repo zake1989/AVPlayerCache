@@ -17,11 +17,12 @@ enum LogLevel: Int {
 }
 
 class BasicFileData {
-    static let bufferSize: Int = 50*1000
-    static let predownloadSize: Int = 800*1000
+    static let bufferSize: Int = 40*1000
+    static let predownloadSize: Int = 400*1000
+    static let firstBufferMinSize: Int = 150*1000
     static let dataHandleQueueLabel: String = "VideoDataHandleQueue"
     static let sessionOperationQueueName: String = "VideoDownloadSessionQueue"
-    static let maxCacheSize = 50
+    static let maxCacheSize = 150
     
     static let tryForcePlayBufferCount = 6
     static let localURLPrefix: String = "CacheUrlPrefix"

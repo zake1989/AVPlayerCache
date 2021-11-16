@@ -314,7 +314,7 @@ public class CacheFileHandler {
 
 extension CacheFileHandler: SessionOutputDelegate {
     
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse) {
+    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse) {
         let needResponse = savedCacheData.fileInfo.isEmptyInfo()
         readCacheFileInfo(from: response)
         if needResponse {
@@ -326,7 +326,7 @@ extension CacheFileHandler: SessionOutputDelegate {
         }
     }
     
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         Cache_Print("data fetched on remote: \(data.count)", level: LogLevel.file)
         guard !(startOffSet == 0 && data.count <= 2) else {
             return
@@ -340,7 +340,7 @@ extension CacheFileHandler: SessionOutputDelegate {
         }
     }
     
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+    public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let e = error as NSError?, e.code == NSURLErrorCancelled {
             Cache_Print(e, level: LogLevel.file)
             return
@@ -349,7 +349,7 @@ extension CacheFileHandler: SessionOutputDelegate {
         processChunk(error)
     }
     
-    func urlSession(endWithDuration: TimeInterval, dataSize: Int64, urlString: String?) {
+    public func urlSession(endWithDuration: TimeInterval, dataSize: Int64, urlString: String?) {
         delegate?.fileHandlerRequesetEnd(duration: endWithDuration, dataSize: dataSize, urlString: urlString)
     }
 }

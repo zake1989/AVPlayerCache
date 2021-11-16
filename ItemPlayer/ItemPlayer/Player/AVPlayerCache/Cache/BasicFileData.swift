@@ -49,7 +49,7 @@ class ItemURL {
     }
 }
 
-typealias DataRange = Range<Int64>
+public typealias DataRange = Range<Int64>
 
 extension Range where Bound == Int64 {
     

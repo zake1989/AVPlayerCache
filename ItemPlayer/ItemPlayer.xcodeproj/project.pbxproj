@@ -20,6 +20,7 @@
 		45285CE72497722900018EEF /* PreDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45285CDB2497722900018EEF /* PreDownloadManager.swift */; };
 		45285CE82497722900018EEF /* ItemPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45285CDC2497722900018EEF /* ItemPlayer.swift */; };
 		45285CF32497832F00018EEF /* ExceptionCatcher.h in Headers */ = {isa = PBXBuildFile; fileRef = 45285CF22497832F00018EEF /* ExceptionCatcher.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		AE4996182743BF360056BEEA /* NewCacheDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE4996172743BF360056BEEA /* NewCacheDownloader.swift */; };
 		AEC608EC2684370F0068DE68 /* ItemPlayerObserverControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEC608EB2684370F0068DE68 /* ItemPlayerObserverControl.swift */; };
 /* End PBXBuildFile section */
 
@@ -39,6 +40,7 @@
 		45285CDB2497722900018EEF /* PreDownloadManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PreDownloadManager.swift; sourceTree = "<group>"; };
 		45285CDC2497722900018EEF /* ItemPlayer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemPlayer.swift; sourceTree = "<group>"; };
 		45285CF22497832F00018EEF /* ExceptionCatcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ExceptionCatcher.h; sourceTree = "<group>"; };
+		AE4996172743BF360056BEEA /* NewCacheDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewCacheDownloader.swift; sourceTree = "<group>"; };
 		AEC608EB2684370F0068DE68 /* ItemPlayerObserverControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemPlayerObserverControl.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -122,6 +124,7 @@
 		45285CD42497722900018EEF /* Cache */ = {
 			isa = PBXGroup;
 			children = (
+				AE4996172743BF360056BEEA /* NewCacheDownloader.swift */,
 				45285CD82497722900018EEF /* BasicFileData.swift */,
 				45285CD92497722900018EEF /* CacheMetaData.swift */,
 				45285CD62497722900018EEF /* CacheDownloader.swift */,
@@ -222,6 +225,7 @@
 			files = (
 				45285CE82497722900018EEF /* ItemPlayer.swift in Sources */,
 				45285CE02497722900018EEF /* FileDownlaodingManager.swift in Sources */,
+				AE4996182743BF360056BEEA /* NewCacheDownloader.swift in Sources */,
 				45285CE12497722900018EEF /* CachePrinter.swift in Sources */,
 				45285CE52497722900018EEF /* BasicFileData.swift in Sources */,
 				45285CE72497722900018EEF /* PreDownloadManager.swift in Sources */,

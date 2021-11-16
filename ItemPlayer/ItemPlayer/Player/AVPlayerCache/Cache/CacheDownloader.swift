@@ -8,7 +8,7 @@
 
 import UIKit
 
-protocol SessionBaseOutputDelegate: AnyObject {
+public protocol SessionBaseOutputDelegate: AnyObject {
     func urlSession(_ session: URLSession,
                     dataTask: URLSessionDataTask,
                     didReceive data: Data)
@@ -18,7 +18,7 @@ protocol SessionBaseOutputDelegate: AnyObject {
                     didCompleteWithError error: Error?)
 }
 
-protocol SessionForwordDelegate: SessionBaseOutputDelegate {
+public protocol SessionForwordDelegate: SessionBaseOutputDelegate {
     func urlSession(_ session: URLSession,
                     didReceive challenge: URLAuthenticationChallenge,
                     completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void)
@@ -29,7 +29,7 @@ protocol SessionForwordDelegate: SessionBaseOutputDelegate {
                     completionHandler: @escaping (URLSession.ResponseDisposition) -> Void)
 }
 
-protocol SessionOutputDelegate: SessionBaseOutputDelegate {
+public protocol SessionOutputDelegate: SessionBaseOutputDelegate {
     func urlSession(_ session: URLSession,
                     dataTask: URLSessionDataTask,
                     didReceive response: URLResponse)
@@ -118,7 +118,7 @@ class SessionDataForworder: NSObject, URLSessionDataDelegate {
     func urlSession(_ session: URLSession,
                     dataTask: URLSessionDataTask,
                     didBecome downloadTask: URLSessionDownloadTask) {
-        
+        print("data task become download task")
     }
     
     func urlSession(_ session: URLSession,
@@ -135,14 +135,16 @@ extension Notification.Name {
     static let ResumeDownload = Notification.Name("ResumeDownloadOnVSKitDownloadVideo")
 }
 
-class CacheDownloader: NSObject {
+public class CacheDownloader: NSObject {
     deinit {
         resetSession()
         NotificationCenter.default.removeObserver(self)
         Cache_Print("deinit cache downloader", level: LogLevel.dealloc)
     }
     
-    weak var outputDelegate: SessionOutputDelegate?
+    public weak var outputDelegate: SessionOutputDelegate?
+    
+    public var sessionIsRuning: Bool = false
     
     fileprivate var session: URLSession?
     fileprivate var task: URLSessionDataTask?
@@ -167,10 +169,24 @@ class CacheDownloader: NSObject {
     
     fileprivate var cancel: Bool = false
     
-    override init() {
+    public override init() {
         super.init()
         NotificationCenter.default.addObserver(self, selector: #selector(self.pauseCurrentTask), name: .PauseDownload, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.resumeCurrentTask), name: .ResumeDownload, object: nil)
+    }
+    
+    public func stopDownload() {
+        SessionStatusQueue.async {
+            self.resetSession()
+        }
+    }
+    
+    public func startDownload(from url: URL, at range: DataRange) {
+        SessionStatusQueue.async {
+            self.resetSession()
+            self.createSession()
+            self.downLoad(from: url, at: range)
+        }
     }
     
     @objc fileprivate func pauseCurrentTask() {
@@ -182,20 +198,6 @@ class CacheDownloader: NSObject {
     @objc fileprivate func resumeCurrentTask() {
         SessionStatusQueue.async {
             self.task?.resume()
-        }
-    }
-    
-    func stopDownload() {
-        SessionStatusQueue.async {
-            self.resetSession()
-        }
-    }
-    
-    func startDownload(from url: URL, at range: DataRange) {
-        SessionStatusQueue.async {
-            self.resetSession()
-            self.createSession()
-            self.downLoad(from: url, at: range)
         }
     }
     
@@ -211,25 +213,23 @@ class CacheDownloader: NSObject {
         task = session?.dataTask(with: request)
         task?.resume()
         date = CFAbsoluteTimeGetCurrent()
-//        let event = LogEvent(.startDownloadCurrentVideo)
-//        event.counter = Int(range.isEmpty ? -1 : range.upperBound-range.lowerBound)
-//        event.videoDuration = Int(range.lowerBound)
-//        event.itemType = url.absoluteString
-//        AnalyticsEventUploader.shared.addNewEvent(event)
     }
     
     fileprivate func createSession() {
         let configuration = URLSessionConfiguration.default
+        if #available(iOS 11.0, *) {
+            configuration.waitsForConnectivity = false
+        }
         configuration.timeoutIntervalForResource = 60
         configuration.timeoutIntervalForRequest = 60
         session = URLSession(configuration: configuration,
-                                        delegate: sessionDataForworder,
-                                        delegateQueue: sessionQueue)
-//        print("session -> created \(self) -- \(session)")
+                             delegate: sessionDataForworder,
+                             delegateQueue: sessionQueue)
+        //        print("session -> created \(self) -- \(session)")
     }
     
     fileprivate func resetSession() {
-//        print("session -> reset \(self) -- \(session)")
+        //        print("session -> reset \(self) -- \(session)")
         session?.invalidateAndCancel()
         session = nil
         task = nil
@@ -247,7 +247,7 @@ class CacheDownloader: NSObject {
 }
 
 extension CacheDownloader: SessionForwordDelegate {
-    func urlSession(_ session: URLSession,
+    public func urlSession(_ session: URLSession,
                     didReceive challenge: URLAuthenticationChallenge,
                     completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         if let trust = challenge.protectionSpace.serverTrust {
@@ -259,7 +259,7 @@ extension CacheDownloader: SessionForwordDelegate {
         }
     }
     
-    func urlSession(_ session: URLSession,
+    public func urlSession(_ session: URLSession,
                     dataTask: URLSessionDataTask,
                     didReceive response: URLResponse,
                     completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
@@ -272,7 +272,7 @@ extension CacheDownloader: SessionForwordDelegate {
         }
     }
     
-    func urlSession(_ session: URLSession,
+    public func urlSession(_ session: URLSession,
                     dataTask: URLSessionDataTask,
                     didReceive data: Data) {
         outputDelegate?.urlSession(session,
@@ -280,7 +280,7 @@ extension CacheDownloader: SessionForwordDelegate {
                                    didReceive: data)
     }
     
-    func urlSession(_ session: URLSession,
+    public func urlSession(_ session: URLSession,
                     task: URLSessionTask,
                     didCompleteWithError error: Error?) {
         Cache_Print("finish download: \(error?.localizedDescription ?? "no error")", level: LogLevel.net)

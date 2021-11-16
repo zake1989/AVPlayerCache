@@ -33,14 +33,14 @@ public class ItemPlayer {
     
     public var itemDuration: CMTime {
         guard let playerItem = player.currentItem, !playerItem.duration.isIndefinite else {
-            return CMTime.init(seconds: 0.0, preferredTimescale: CMTimeScale(30.0))
+            return CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0))
         }
         return playerItem.duration
     }
     
     public var currentTime: CMTime {
         guard let playerItem = player.currentItem, !playerItem.duration.isIndefinite else {
-            return CMTime.init(seconds: 0.0, preferredTimescale: CMTimeScale(30.0))
+            return CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0))
         }
         return playerItem.currentTime()
     }
@@ -216,6 +216,7 @@ public extension ItemPlayer {
         guard (playStatus != .playing && playStatus != .preparing) || player.rate == 0.0 else {
             return
         }
+        Player_Print(" call back -> player called play ==> called play")
         checkPlayerErrorPlay()
     }
     
@@ -242,6 +243,7 @@ public extension ItemPlayer {
                 return
             }
             if strongSelf.playStatus == .playing || forcePlay {
+                Player_Print(" call back -> player called play ==> from begin")
                 strongSelf.checkPlayerErrorPlay()
             }
         }
@@ -327,7 +329,7 @@ extension ItemPlayer {
             player.pause()
             return
         }
-//        Player_Print(" call back -> player called play")
+        Player_Print(" call back -> player called play")
         player.play()
         if rate != 1.0 {
             player.rate = rate
@@ -345,15 +347,18 @@ extension ItemPlayer {
             }
         }
         guard observerControl.hasTimeObserver else {
+            Player_Print(" call back -> time check fail")
             return timeDone
         }
         let duration = itemDuration.seconds
         if duration == Double.nan || duration <= 0 {
+            Player_Print(" call back -> time check fail")
             return timeDone
         }
         if expectedDuration <= 0 ||
             (expectedDuration > 0 && duration > max(expectedDuration-2, 4)) ||
             (failedDuration == duration) {
+            Player_Print(" call back -> time check success")
             timeDone = true
         } else {
             if duration > 3 {
@@ -379,6 +384,7 @@ extension ItemPlayer {
         fastSeek(seekProgressAfterPrepare)
         seekProgressAfterPrepare = 0
         if oldStatus == .playing || needForcePlay {
+            Player_Print(" call back -> player called play ==> when seek finish")
             checkPlayerErrorPlay()
         } else {
             player.pause()
@@ -390,6 +396,7 @@ extension ItemPlayer {
         // 可以开始播放的状态 如果开启强制播放 就强制播放 如果没有开启强制播放 就保持暂停
         if oldStatus == .playing || needForcePlay {
 //            Player_Print("status change: force play")
+            Player_Print(" call back -> player called play ==> when ready to play")
             checkPlayerErrorPlay()
         } else {
             player.pause()

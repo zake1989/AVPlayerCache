@@ -10,6 +10,7 @@ import UIKit
 import AVFoundation
 
 public protocol CachedItemHandleDelegate: AnyObject {
+    func dataHandleStarted()
     func finishDownloadFile(duration: TimeInterval, dataSize: Int64, urlString: String?)
     func needRecoverFromError()
     func noMoreRequestCheck()
@@ -118,6 +119,9 @@ class CachedItemResourceLoader: NSObject {
         }
         cacheFileHandler = CacheFileHandler(videoUrl: urlString)
         cacheFileHandler?.delegate = self
+        if cacheFileHandler?.fullyDownloaded == true {
+            delegate?.dataHandleStarted()
+        }
     }
     
 }
@@ -125,6 +129,9 @@ class CachedItemResourceLoader: NSObject {
 extension CachedItemResourceLoader: FileDataDelegate {
     func fileHandlerGetResponse(fileInfo info: CacheFileInfo, response: URLResponse?) {
         DispatchQueue.main.async {
+            if response != nil {
+                self.delegate?.dataHandleStarted()
+            }
             guard let infoRequest = self.fetchInfoRequest(),
                 infoRequest.contentInformationRequest != nil else {
                     return

@@ -13,7 +13,7 @@ class PartsTestViewController: UIViewController {
     
     let urlString: String = "https://mvvideo5.meitudata.com/56ea0e90d6cb2653.mp4"
     
-    let downloader: CacheDownloader = CacheDownloader()
+    let downloader: NewCacheDownloader = NewCacheDownloader()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -35,7 +35,7 @@ class PartsTestViewController: UIViewController {
     }
 }
 
-extension PartsTestViewController: SessionOutputDelegate {
+extension PartsTestViewController: NewSessionOutputDelegate {
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse) {
         print("session data task => receive response \(response)")
     }

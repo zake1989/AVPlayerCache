@@ -26,7 +26,7 @@ class BasicFileData {
     
     static let tryForcePlayBufferCount = 6
     static let localURLPrefix: String = "CacheUrlPrefix"
-    static let logLevel: LogLevel = .error
+    static let logLevel: LogLevel = .net
 }
 
 class ItemURL {
@@ -90,4 +90,10 @@ extension Range where Bound == Int64 {
                                             upper: Int(upperBound)-startLowerBound))
     }
     
+}
+
+extension Notification.Name {
+    // 预加载控制
+    static let PauseDownload = Notification.Name("PauseDownloadOnVSKitDownloadVideo")
+    static let ResumeDownload = Notification.Name("ResumeDownloadOnVSKitDownloadVideo")
 }

@@ -39,102 +39,6 @@ public protocol SessionOutputDelegate: SessionBaseOutputDelegate {
                     urlString: String?)
 }
 
-class SessionDataForworder: NSObject, URLSessionDataDelegate {
-    
-    deinit {
-        Cache_Print("deinit session data forworder", level: LogLevel.dealloc)
-    }
-    
-    weak var forwordDelegate: SessionForwordDelegate?
-    
-    fileprivate var bufferData: Data = Data()
-    
-    fileprivate let dataHandleQueue = DispatchQueue(label: BasicFileData.dataHandleQueueLabel, qos: .userInteractive)
-    
-    func urlSession(_ session: URLSession,
-                    didReceive challenge: URLAuthenticationChallenge,
-                    completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-        forwordDelegate?.urlSession(session,
-                                    didReceive: challenge,
-                                    completionHandler: completionHandler)
-    }
-    
-    func urlSession(_ session: URLSession,
-                    dataTask: URLSessionDataTask,
-                    didReceive response: URLResponse,
-                    completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
-        dataHandleQueue.async {
-            self.forwordDelegate?.urlSession(session,
-                                             dataTask: dataTask,
-                                             didReceive: response,
-                                             completionHandler: completionHandler)
-        }
-    }
-    
-    func urlSession(_ session: URLSession,
-                    dataTask: URLSessionDataTask,
-                    didReceive data: Data) {
-        dataHandleQueue.async {
-            Cache_Print("session data receive: \(data.count)", level: LogLevel.net)
-            self.bufferData.append(data)
-            guard self.bufferData.count > BasicFileData.bufferSize else {
-                return
-            }
-            Cache_Print("buffer data size: \(self.bufferData.count)", level: LogLevel.net)
-            let forwordData = self.bufferData
-            let range = Range<Data.Index>.init(uncheckedBounds: (0, self.bufferData.count))
-            self.bufferData.replaceSubrange(range, with: Data())
-            Cache_Print("after clear buffer data size: \(self.bufferData.count)", level: LogLevel.net)
-            self.forwordDelegate?.urlSession(session, dataTask: dataTask, didReceive: forwordData)
-        }
-    }
-    
-    func urlSession(_ session: URLSession,
-                    task: URLSessionTask,
-                    didCompleteWithError error: Error?) {
-        dataHandleQueue.async {
-            Cache_Print("session data finish receive", level: LogLevel.net)
-            guard self.bufferData.count > 0 else {
-                self.forwordDelegate?.urlSession(session, task: task, didCompleteWithError: error)
-                return
-            }
-            Cache_Print("buffer data size: \(self.bufferData.count)", level: LogLevel.net)
-            let forwordData = self.bufferData
-            let range = Range<Data.Index>.init(uncheckedBounds: (0, self.bufferData.count))
-            self.bufferData.replaceSubrange(range, with: Data())
-            Cache_Print("after clear buffer data size: \(self.bufferData.count)", level: LogLevel.net)
-            self.forwordDelegate?.urlSession(session, dataTask: task as! URLSessionDataTask, didReceive: forwordData)
-            self.forwordDelegate?.urlSession(session, task: task, didCompleteWithError: error)
-        }
-    }
-    
-    func urlSession(_ session: URLSession,
-                    dataTask: URLSessionDataTask,
-                    willCacheResponse proposedResponse: CachedURLResponse,
-                    completionHandler: @escaping (CachedURLResponse?) -> Void) {
-        completionHandler(proposedResponse)
-    }
-    
-    func urlSession(_ session: URLSession,
-                    dataTask: URLSessionDataTask,
-                    didBecome downloadTask: URLSessionDownloadTask) {
-        print("data task become download task")
-    }
-    
-    func urlSession(_ session: URLSession,
-                    dataTask: URLSessionDataTask,
-                    didBecome streamTask: URLSessionStreamTask) {
-        
-    }
-    
-}
-
-extension Notification.Name {
-    // 预加载控制
-    static let PauseDownload = Notification.Name("PauseDownloadOnVSKitDownloadVideo")
-    static let ResumeDownload = Notification.Name("ResumeDownloadOnVSKitDownloadVideo")
-}
-
 public class CacheDownloader: NSObject {
     deinit {
         resetSession()
@@ -143,8 +47,6 @@ public class CacheDownloader: NSObject {
     }
     
     public weak var outputDelegate: SessionOutputDelegate?
-    
-    public var sessionIsRuning: Bool = false
     
     fileprivate var session: URLSession?
     fileprivate var task: URLSessionDataTask?
@@ -161,6 +63,7 @@ public class CacheDownloader: NSObject {
     fileprivate let sessionQueue: OperationQueue = {
         let queue = OperationQueue()
         queue.name = BasicFileData.sessionOperationQueueName
+        queue.maxConcurrentOperationCount = 1
         return queue
     }()
     
@@ -292,4 +195,94 @@ extension CacheDownloader: SessionForwordDelegate {
                                    dataSize: data,
                                    urlString: task.currentRequest?.url?.absoluteString)
     }
+}
+
+class SessionDataForworder: NSObject, URLSessionDataDelegate {
+    
+    deinit {
+        Cache_Print("deinit session data forworder", level: LogLevel.dealloc)
+    }
+    
+    weak var forwordDelegate: SessionForwordDelegate?
+    
+    fileprivate var bufferData: Data = Data()
+    
+    fileprivate let dataHandleQueue = DispatchQueue(label: BasicFileData.dataHandleQueueLabel, qos: .userInteractive)
+    
+    func urlSession(_ session: URLSession,
+                    didReceive challenge: URLAuthenticationChallenge,
+                    completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        forwordDelegate?.urlSession(session,
+                                    didReceive: challenge,
+                                    completionHandler: completionHandler)
+    }
+    
+    func urlSession(_ session: URLSession,
+                    dataTask: URLSessionDataTask,
+                    didReceive response: URLResponse,
+                    completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        dataHandleQueue.async {
+            self.forwordDelegate?.urlSession(session,
+                                             dataTask: dataTask,
+                                             didReceive: response,
+                                             completionHandler: completionHandler)
+        }
+    }
+    
+    func urlSession(_ session: URLSession,
+                    dataTask: URLSessionDataTask,
+                    didReceive data: Data) {
+        dataHandleQueue.async {
+            Cache_Print("session data receive: \(data.count)", level: LogLevel.net)
+            self.bufferData.append(data)
+            guard self.bufferData.count > BasicFileData.bufferSize else {
+                return
+            }
+            Cache_Print("buffer data size: \(self.bufferData.count)", level: LogLevel.net)
+            let forwordData = self.bufferData
+            let range = Range<Data.Index>.init(uncheckedBounds: (0, self.bufferData.count))
+            self.bufferData.replaceSubrange(range, with: Data())
+            Cache_Print("after clear buffer data size: \(self.bufferData.count)", level: LogLevel.net)
+            self.forwordDelegate?.urlSession(session, dataTask: dataTask, didReceive: forwordData)
+        }
+    }
+    
+    func urlSession(_ session: URLSession,
+                    task: URLSessionTask,
+                    didCompleteWithError error: Error?) {
+        dataHandleQueue.async {
+            Cache_Print("session data finish receive", level: LogLevel.net)
+            guard self.bufferData.count > 0 else {
+                self.forwordDelegate?.urlSession(session, task: task, didCompleteWithError: error)
+                return
+            }
+            Cache_Print("buffer data size: \(self.bufferData.count)", level: LogLevel.net)
+            let forwordData = self.bufferData
+            let range = Range<Data.Index>.init(uncheckedBounds: (0, self.bufferData.count))
+            self.bufferData.replaceSubrange(range, with: Data())
+            Cache_Print("after clear buffer data size: \(self.bufferData.count)", level: LogLevel.net)
+            self.forwordDelegate?.urlSession(session, dataTask: task as! URLSessionDataTask, didReceive: forwordData)
+            self.forwordDelegate?.urlSession(session, task: task, didCompleteWithError: error)
+        }
+    }
+    
+    func urlSession(_ session: URLSession,
+                    dataTask: URLSessionDataTask,
+                    willCacheResponse proposedResponse: CachedURLResponse,
+                    completionHandler: @escaping (CachedURLResponse?) -> Void) {
+        completionHandler(proposedResponse)
+    }
+    
+    func urlSession(_ session: URLSession,
+                    dataTask: URLSessionDataTask,
+                    didBecome downloadTask: URLSessionDownloadTask) {
+        print("data task become download task")
+    }
+    
+    func urlSession(_ session: URLSession,
+                    dataTask: URLSessionDataTask,
+                    didBecome streamTask: URLSessionStreamTask) {
+        
+    }
+    
 }

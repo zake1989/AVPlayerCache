@@ -15,7 +15,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
         guard #available(iOS 13, *) else {
-            print("Returning if iOS 12 or lower")
+            print("return if iOS 12 or lower")
             createWindow()
             return true
         }
@@ -43,7 +43,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
     
     class func setupWindow(window: UIWindow?) {
-        window?.rootViewController = PartsTestViewController()
+        window?.rootViewController = ViewController()
         window?.makeKeyAndVisible()
     }
 }

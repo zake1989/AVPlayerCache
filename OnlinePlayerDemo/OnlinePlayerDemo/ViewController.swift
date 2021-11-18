@@ -48,7 +48,7 @@ class ViewController: UIViewController {
         let itemPlayer = ItemPlayer(item: item)
         itemPlayer.itemPlayerDelegate = self
         itemPlayer.forcePlayModel = true
-        itemPlayer.expectedDuration = 0.0
+        itemPlayer.expectedDuration = -2
         return itemPlayer
     }()
     
@@ -113,8 +113,6 @@ extension ViewController: ItemPlayerDelegate {
     func didReachEnd() {
         
     }
-    
-    
 }
 
 extension ViewController {
